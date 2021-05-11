@@ -1,0 +1,5 @@
+node_modules
+*.xml
+test.ts
+code-generator.ts
+./lib
