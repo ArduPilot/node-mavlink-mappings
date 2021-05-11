@@ -42,7 +42,7 @@ export abstract class MavLinkData {
 /**
  * Interface describing static fields of a data classes
  */
-interface MavLinkDataConstructor<T extends MavLinkData> {
+export interface MavLinkDataConstructor<T extends MavLinkData> {
   // static fields overriden by descendants of MavLinkData
   MSG_ID: number
   MSG_NAME: string
