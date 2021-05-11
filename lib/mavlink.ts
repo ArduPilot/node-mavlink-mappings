@@ -1,7 +1,3 @@
-import { uint8_t, uint16_t } from './types'
-import { x25crc, dump } from './utils'
-import { MSG_ID_MAGIC_NUMBER } from './magic-numbers'
-
 /**
  * Field definition
  */
