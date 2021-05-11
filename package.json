@@ -1,11 +1,12 @@
 {
   "name": "mavlink-mappings",
-  "version": "1.0.0",
+  "version": "1.0.0-rc.1",
   "author": "Matthias Hryniszak <padcom@gmail.com>",
   "license": "LGPL",
   "description": "MavLink message definitions",
   "keywords": [
-    "mavlink"
+    "mavlink",
+    "node-mavlink"
   ],
   "repository": {
     "type": "git",
