@@ -1,6 +1,6 @@
 {
   "name": "mavlink-mappings",
-  "version": "1.0.0",
+  "version": "1.0.1-20210915",
   "author": "Matthias Hryniszak <padcom@gmail.com>",
   "license": "LGPL",
   "description": "MavLink message definitions",
@@ -36,6 +36,7 @@
     "@types/node": "^15.0.1",
     "@types/xml2js": "^0.4.8",
     "ts-node": "^9.1.1",
+    "typescript": "^4.4.3",
     "wget-improved": "^3.2.1",
     "xml2js": "^0.4.23"
   }

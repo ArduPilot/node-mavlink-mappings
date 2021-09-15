@@ -66,14 +66,14 @@ function getTypeSize(type) {
   }
 }
 
-function matchTextToWidth(s, width = 100) {
+function matchTextToWidth(s: string, width = 100) {
   // replace all new-line characters with spaces
   while (s.indexOf('\n') !== -1) {
     s = s.replace('\n', ' ')
   }
   // replace all double-spaces with single spaces
   while (s.indexOf('  ') !== -1) {
-    s = s.replaceAll('  ', ' ')
+    s = s.replace(/  /g, ' ')
   }
 
   // cut text into max 100 character lines and remove any persisting whitespaces
@@ -331,7 +331,7 @@ function generate(name: string, obj: any, output: Writter) {
   messages.forEach(message => {
     message.payloadLength = message.fields.reduce((acc, field) => acc + field.size, 0)
   })
-  
+
   // calculate CRC_EXTRA
   messages.forEach((message) => {
     // CRC is generated from the definition of base fields in network order (big fields first, then the small ones)

@@ -79,6 +79,7 @@ export enum MavType {
   'ODID'                                         = 34,
   'DECAROTOR'                                    = 35,
   'BATTERY'                                      = 36,
+  'PARACHUTE'                                    = 37,
 }
 
 /**
@@ -576,6 +577,7 @@ export enum MavComponent {
   'PERIPHERAL'                                   = 158,
   'QX1_GIMBAL'                                   = 159,
   'FLARM'                                        = 160,
+  'PARACHUTE'                                    = 161,
   'GIMBAL2'                                      = 171,
   'GIMBAL3'                                      = 172,
   'GIMBAL4'                                      = 173,
@@ -590,6 +592,24 @@ export enum MavComponent {
    * don't directly speak mavlink and so on.
    */
   'ONBOARD_COMPUTER'                             = 191,
+  /**
+   * Component that lives on the onboard computer (companion computer) and has some generic
+   * functionalities, such as settings system parameters and monitoring the status of some processes that
+   * don't directly speak mavlink and so on.
+   */
+  'ONBOARD_COMPUTER2'                            = 192,
+  /**
+   * Component that lives on the onboard computer (companion computer) and has some generic
+   * functionalities, such as settings system parameters and monitoring the status of some processes that
+   * don't directly speak mavlink and so on.
+   */
+  'ONBOARD_COMPUTER3'                            = 193,
+  /**
+   * Component that lives on the onboard computer (companion computer) and has some generic
+   * functionalities, such as settings system parameters and monitoring the status of some processes that
+   * don't directly speak mavlink and so on.
+   */
+  'ONBOARD_COMPUTER4'                            = 194,
   /**
    * Component that finds an optimal path between points based on a certain constraint (e.g. minimum
    * snap, shortest path, cost, etc.).

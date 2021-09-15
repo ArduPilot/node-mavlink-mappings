@@ -545,35 +545,21 @@ export enum WifiConfigApMode {
 }
 
 /**
- * Possible values for COMPONENT_INFORMATION.comp_metadata_type.
+ * Supported component metadata types. These are used in the "general" metadata file returned by
+ * COMPONENT_INFORMATION to provide information about supported metadata types. The types are not used
+ * directly in MAVLink messages.
  */
 export enum CompMetadataType {
   /**
-   * General information which also includes information on other optional supported
-   * COMP_METADATA_TYPE's. Must be supported. Only downloadable from vehicle.
+   * General information about the component. General metadata includes information about other
+   * COMP_METADATA_TYPEs supported by the component. This type must be supported and must be downloadable
+   * from vehicle.
    */
   'GENERAL'                                        = 0,
   'PARAMETER'                                      = 1,
   'COMMANDS'                                       = 2,
   'PERIPHERALS'                                    = 3,
   'EVENTS'                                         = 4,
-}
-
-/**
- * Possible transport layers to set and get parameters via mavlink during a parameter transaction.
- */
-export enum ParamTransactionTransport {
-  'PARAM'                                          = 0,
-  'PARAM_EXT'                                      = 1,
-}
-
-/**
- * Possible parameter transaction actions.
- */
-export enum ParamTransactionAction {
-  'START'                                          = 0,
-  'COMMIT'                                         = 1,
-  'CANCEL'                                         = 2,
 }
 
 /**
@@ -624,8 +610,8 @@ export enum MavCmd {
   'DO_FOLLOW'                                      = 32,
   'DO_FOLLOW_REPOSITION'                           = 33,
   /**
-   * Start orbiting on the circumference of a circle defined by the parameters. Setting any value NaN
-   * results in using defaults.
+   * Start orbiting on the circumference of a circle defined by the parameters. Setting values to
+   * NaN/INT32_MAX (as appropriate) results in using defaults.
    */
   'DO_ORBIT'                                       = 34,
   /**
@@ -833,6 +819,14 @@ export enum MavCmd {
   'MISSION_START'                                  = 300,
   'COMPONENT_ARM_DISARM'                           = 400,
   /**
+   * Instructs system to run pre-arm checks. This command should return MAV_RESULT_TEMPORARILY_REJECTED
+   * in the case the system is armed, otherwise MAV_RESULT_ACCEPTED. Note that the return value from
+   * executing this command does not indicate whether the vehicle is armable or not, just whether the
+   * system has successfully run/is currently running the checks. The result of the checks is reflected
+   * in the SYS_STATUS message.
+   */
+  'RUN_PREARM_CHECKS'                              = 401,
+  /**
    * Turns illuminators ON/OFF. An illuminator is a light source that is used for lighting up dark areas
    * external to the sytstem: e.g. a torch or searchlight (as opposed to a light source for illuminating
    * the system itself, e.g. an indicator light).
@@ -901,13 +895,6 @@ export enum MavCmd {
    * always select the one with the lowest mission sequence number.
    */
   'DO_JUMP_TAG'                                    = 601,
-  /**
-   * Request to start or end a parameter transaction. Multiple kinds of transport layers can be used to
-   * exchange parameters in the transaction (param, param_ext and mavftp). The command response can
-   * either be a success/failure or an in progress in case the receiving side takes some time to apply
-   * the parameters.
-   */
-  'PARAM_TRANSACTION'                              = 900,
   /**
    * High level setpoint to be sent to a gimbal manager to set a gimbal attitude. It is possible to set
    * combinations of the values below. E.g. an angle as well as a desired angular rate can be used to get
@@ -994,6 +981,12 @@ export enum MavCmd {
    * re-transmission of the node information messages.
    */
   'UAVCAN_GET_NODE_INFO'                           = 5200,
+  /**
+   * Trigger the start of an ADSB-out IDENT. This should only be used when requested to do so by an Air
+   * Traffic Controller in controlled airspace. This starts the IDENT which is then typically held for 18
+   * seconds by the hardware per the Mode A, C, and S transponder spec.
+   */
+  'DO_ADSB_OUT_IDENT'                              = 10001,
   /**
    * Deploy payload on a Lat / Lon / Alt position. This includes the navigation to reach the required
    * release position and velocity.
@@ -1950,62 +1943,6 @@ export enum UtmDataAvailFlags {
 }
 
 /**
- * Cellular network radio type
- */
-export enum CellularNetworkRadioType {
-  'NONE'                                           = 0,
-  'GSM'                                            = 1,
-  'CDMA'                                           = 2,
-  'WCDMA'                                          = 3,
-  'LTE'                                            = 4,
-}
-
-/**
- * These flags encode the cellular network status
- */
-export enum CellularStatusFlag {
-  'UNKNOWN'                                        = 0,
-  'FAILED'                                         = 1,
-  'INITIALIZING'                                   = 2,
-  'LOCKED'                                         = 3,
-  'DISABLED'                                       = 4,
-  'DISABLING'                                      = 5,
-  'ENABLING'                                       = 6,
-  /**
-   * Modem is enabled and powered on but not registered with a network provider and not available for
-   * data connections
-   */
-  'ENABLED'                                        = 7,
-  'SEARCHING'                                      = 8,
-  /**
-   * Modem is registered with a network provider, and data connections and messaging may be available for
-   * use
-   */
-  'REGISTERED'                                     = 9,
-  /**
-   * Modem is disconnecting and deactivating the last active packet data bearer. This state will not be
-   * entered if more than one packet data bearer is active and one of the active bearers is deactivated
-   */
-  'DISCONNECTING'                                  = 10,
-  /**
-   * Modem is activating and connecting the first packet data bearer. Subsequent bearer activations when
-   * another bearer is already active do not cause this state to be entered
-   */
-  'CONNECTING'                                     = 11,
-  'CONNECTED'                                      = 12,
-}
-
-/**
- * These flags are used to diagnose the failure state of CELLULAR_STATUS
- */
-export enum CellularNetworkFailedReason {
-  'NONE'                                           = 0,
-  'UNKNOWN'                                        = 1,
-  'SIM_MISSING'                                    = 2,
-  'SIM_ERROR'                                      = 3,
-}
-
-/**
  * Precision land modes (used in MAV_CMD_NAV_LAND).
  */
 export enum PrecisionLandMode {
@@ -2434,6 +2371,24 @@ export enum FailureType {
 }
 
 /**
+ * NAV_VTOL_LAND_OPTIONS
+ */
+export enum NavVtolLandOptions {
+  'DEFAULT'                                        = 0,
+  /**
+   * Descend in fixed wing mode, transitioning to multicopter mode for vertical landing when close to the
+   * ground. The fixed wing descent pattern is at the discretion of the vehicle (e.g. transition
+   * altitude, loiter direction, radius, and speed, etc.).
+   */
+  'FW_DESCENT'                                     = 1,
+  /**
+   * Land in multicopter mode on reaching the landing co-ordinates (the whole landing is by "hover
+   * descent").
+   */
+  'HOVER_DESCENT'                                  = 2,
+}
+
+/**
  * Winch status flags used in WINCH_STATUS
  */
 export enum MavWinchStatusFlag {
@@ -2816,52 +2771,6 @@ export class SetMode extends MavLinkData {
    * The new autopilot-specific mode. This field can be ignored by an autopilot.
    */
   customMode: uint32_t
-}
-
-/**
- * Response from a PARAM_SET message when it is used in a transaction.
- */
-export class ParamAckTransaction extends MavLinkData {
-  static MSG_ID = 19
-  static MSG_NAME = 'PARAM_ACK_TRANSACTION'
-  static PAYLOAD_LENGTH = 24
-  static MAGIC_NUMBER = 137
-
-  static FIELDS = [
-    new MavLinkPacketField('paramValue', 0, false, 4, 'float'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('paramId', 6, false, 1, 'char[]', 16),
-    new MavLinkPacketField('paramType', 22, false, 1, 'uint8_t'),
-    new MavLinkPacketField('paramResult', 23, false, 1, 'uint8_t'),
-  ]
-
-  /**
-   * Id of system that sent PARAM_SET message.
-   */
-  targetSystem: uint8_t
-  /**
-   * Id of system that sent PARAM_SET message.
-   */
-  targetComponent: uint8_t
-  /**
-   * Parameter id, terminated by NULL if the length is less than 16 human-readable chars and WITHOUT null
-   * termination (NULL) byte if the length is exactly 16 chars - applications have to provide 16+1 bytes
-   * storage if the ID is stored as string
-   */
-  paramId: string
-  /**
-   * Parameter value (new value if PARAM_ACCEPTED, current value otherwise)
-   */
-  paramValue: float
-  /**
-   * Parameter type.
-   */
-  paramType: MavParamType
-  /**
-   * Result code.
-   */
-  paramResult: ParamAck
 }
 
 /**
@@ -4470,47 +4379,6 @@ export class MissionRequestInt extends MavLinkData {
 }
 
 /**
- * A broadcast message to notify any ground station or SDK if a mission, geofence or safe points have
- * changed on the vehicle.
- */
-export class MissionChanged extends MavLinkData {
-  static MSG_ID = 52
-  static MSG_NAME = 'MISSION_CHANGED'
-  static PAYLOAD_LENGTH = 7
-  static MAGIC_NUMBER = 132
-
-  static FIELDS = [
-    new MavLinkPacketField('startIndex', 0, false, 2, 'int16_t'),
-    new MavLinkPacketField('endIndex', 2, false, 2, 'int16_t'),
-    new MavLinkPacketField('originSysid', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('originCompid', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 6, false, 1, 'uint8_t'),
-  ]
-
-  /**
-   * Start index for partial mission change (-1 for all items).
-   */
-  startIndex: int16_t
-  /**
-   * End index of a partial mission change. -1 is a synonym for the last mission item (i.e. selects all
-   * items from start_index). Ignore field if start_index=-1.
-   */
-  endIndex: int16_t
-  /**
-   * System ID of the author of the new mission.
-   */
-  originSysid: uint8_t
-  /**
-   * Compnent ID of the author of the new mission.
-   */
-  originCompid: MavComponent
-  /**
-   * Mission type.
-   */
-  missionType: MavMissionType
-}
-
-/**
  * Set a safety zone (volume), which is defined by two corners of a cube. This message can be used to
  * tell the MAV which setpoints/waypoints to accept and which to reject. Safety areas are often
  * enforced by national or competition regulations.
@@ -4671,7 +4539,7 @@ export class AttitudeQuaternionCov extends MavLinkData {
 }
 
 /**
- * The state of the fixed wing navigation and position controller.
+ * The state of the navigation and position controller.
  */
 export class NavControllerOutput extends MavLinkData {
   static MSG_ID = 62
@@ -5071,13 +4939,13 @@ export class DataStream extends MavLinkData {
 
 /**
  * This message provides an API for manually controlling the vehicle using standard joystick axes
- * nomenclature, along with a joystick-like input device. Unused axes can be disabled an buttons are
- * also transmit as boolean values of their
+ * nomenclature, along with a joystick-like input device. Unused axes can be disabled and buttons
+ * states are transmitted as individual on/off bits of a bitmask
  */
 export class ManualControl extends MavLinkData {
   static MSG_ID = 69
   static MSG_NAME = 'MANUAL_CONTROL'
-  static PAYLOAD_LENGTH = 11
+  static PAYLOAD_LENGTH = 18
   static MAGIC_NUMBER = 243
 
   static FIELDS = [
@@ -5087,6 +4955,10 @@ export class ManualControl extends MavLinkData {
     new MavLinkPacketField('r', 6, false, 2, 'int16_t'),
     new MavLinkPacketField('buttons', 8, false, 2, 'uint16_t'),
     new MavLinkPacketField('target', 10, false, 1, 'uint8_t'),
+    new MavLinkPacketField('buttons2', 11, true, 2, 'uint16_t'),
+    new MavLinkPacketField('enabledExtensions', 13, true, 1, 'uint8_t'),
+    new MavLinkPacketField('s', 14, true, 2, 'int16_t'),
+    new MavLinkPacketField('t', 16, true, 2, 'int16_t'),
   ]
 
   /**
@@ -5119,10 +4991,32 @@ export class ManualControl extends MavLinkData {
    */
   r: int16_t
   /**
-   * A bitfield corresponding to the joystick buttons' current state, 1 for pressed, 0 for released. The
-   * lowest bit corresponds to Button 1.
+   * A bitfield corresponding to the joystick buttons' 0-15 current state, 1 for pressed, 0 for released.
+   * The lowest bit corresponds to Button 1.
    */
   buttons: uint16_t
+  /**
+   * A bitfield corresponding to the joystick buttons' 16-31 current state, 1 for pressed, 0 for
+   * released. The lowest bit corresponds to Button 16.
+   */
+  buttons2: uint16_t
+  /**
+   * Set bits to 1 to indicate which of the following extension fields contain valid data: bit 0: pitch,
+   * bit 1: roll.
+   */
+  enabledExtensions: uint8_t
+  /**
+   * Pitch-only-axis, normalized to the range [-1000,1000]. Generally corresponds to pitch on vehicles
+   * with additional degrees of freedom. Valid if bit 0 of enabled_extensions field is set. Set to 0 if
+   * invalid.
+   */
+  s: int16_t
+  /**
+   * Roll-only-axis, normalized to the range [-1000,1000]. Generally corresponds to roll on vehicles with
+   * additional degrees of freedom. Valid if bit 1 of enabled_extensions field is set. Set to 0 if
+   * invalid.
+   */
+  t: int16_t
 }
 
 /**
@@ -5403,7 +5297,9 @@ export class VfrHud extends MavLinkData {
 
 /**
  * Message encoding a command with parameters as scaled integers. Scaling depends on the actual command
- * value. The command microservice is documented at https://mavlink.io/en/services/command.html
+ * value. NaN or INT32_MAX may be used in float/integer params (respectively) to indicate
+ * optional/default values (e.g. to use the component's current latitude, yaw rather than a specific
+ * value). The command microservice is documented at https://mavlink.io/en/services/command.html
  */
 export class CommandInt extends MavLinkData {
   static MSG_ID = 75
@@ -5579,24 +5475,24 @@ export class CommandAck extends MavLinkData {
    */
   result: MavResult
   /**
-   * WIP: Also used as result_param1, it can be set with an enum containing the errors reasons of why the
+   * Also used as result_param1, it can be set with an enum containing the errors reasons of why the
    * command was denied, or the progress percentage when result is MAV_RESULT_IN_PROGRESS (UINT8_MAX if
    * the progress is unknown).
    */
   progress: uint8_t
   /**
-   * WIP: Additional parameter of the result, example: which parameter of MAV_CMD_NAV_WAYPOINT caused it
-   * to be denied.
+   * Additional parameter of the result, example: which parameter of MAV_CMD_NAV_WAYPOINT caused it to be
+   * denied.
    */
   resultParam2: int32_t
   /**
-   * WIP: System ID of the target recipient. This is the ID of the system that sent the command for which
-   * this COMMAND_ACK is an acknowledgement.
+   * System ID of the target recipient. This is the ID of the system that sent the command for which this
+   * COMMAND_ACK is an acknowledgement.
    */
   targetSystem: uint8_t
   /**
-   * WIP: Component ID of the target recipient. This is the ID of the system that sent the command for
-   * which this COMMAND_ACK is an acknowledgement.
+   * Component ID of the target recipient. This is the ID of the system that sent the command for which
+   * this COMMAND_ACK is an acknowledgement.
    */
   targetComponent: uint8_t
 }
@@ -12367,19 +12263,19 @@ export class GimbalManagerSetManualControl extends MavLinkData {
 export class EscInfo extends MavLinkData {
   static MSG_ID = 290
   static MSG_NAME = 'ESC_INFO'
-  static PAYLOAD_LENGTH = 42
-  static MAGIC_NUMBER = 221
+  static PAYLOAD_LENGTH = 46
+  static MAGIC_NUMBER = 251
 
   static FIELDS = [
     new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
     new MavLinkPacketField('errorCount', 8, false, 4, 'uint32_t[]', 4),
     new MavLinkPacketField('counter', 24, false, 2, 'uint16_t'),
     new MavLinkPacketField('failureFlags', 26, false, 2, 'uint16_t[]', 4),
-    new MavLinkPacketField('index', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('count', 35, false, 1, 'uint8_t'),
-    new MavLinkPacketField('connectionType', 36, false, 1, 'uint8_t'),
-    new MavLinkPacketField('info', 37, false, 1, 'uint8_t'),
-    new MavLinkPacketField('temperature', 38, false, 1, 'uint8_t[]', 4),
+    new MavLinkPacketField('temperature', 34, false, 2, 'int16_t[]', 4),
+    new MavLinkPacketField('index', 42, false, 1, 'uint8_t'),
+    new MavLinkPacketField('count', 43, false, 1, 'uint8_t'),
+    new MavLinkPacketField('connectionType', 44, false, 1, 'uint8_t'),
+    new MavLinkPacketField('info', 45, false, 1, 'uint8_t'),
   ]
 
   /**
@@ -12417,9 +12313,9 @@ export class EscInfo extends MavLinkData {
    */
   errorCount: uint32_t[]
   /**
-   * Temperature measured by each ESC. UINT8_MAX if data not supplied by ESC.
+   * Temperature of each ESC. INT16_MAX: if data not supplied by ESC.
    */
-  temperature: uint8_t[]
+  temperature: int16_t[]
 }
 
 /**
@@ -13153,7 +13049,7 @@ export class TrajectoryRepresentationWaypoints extends MavLinkData {
    */
   velYaw: float[]
   /**
-   * Scheduled action for each waypoint, UINT16_MAX if not being used.
+   * MAV_CMD command id of waypoint, set to UINT16_MAX if not being used.
    */
   command: MavCmd
 }
@@ -13207,55 +13103,6 @@ export class TrajectoryRepresentationBezier extends MavLinkData {
    * Yaw. Set to NaN for unchanged
    */
   posYaw: float[]
-}
-
-/**
- * Report current used cellular network status
- */
-export class CellularStatus extends MavLinkData {
-  static MSG_ID = 334
-  static MSG_NAME = 'CELLULAR_STATUS'
-  static PAYLOAD_LENGTH = 10
-  static MAGIC_NUMBER = 72
-
-  static FIELDS = [
-    new MavLinkPacketField('mcc', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('mnc', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('lac', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('status', 6, false, 1, 'uint8_t'),
-    new MavLinkPacketField('failureReason', 7, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 8, false, 1, 'uint8_t'),
-    new MavLinkPacketField('quality', 9, false, 1, 'uint8_t'),
-  ]
-
-  /**
-   * Cellular modem status
-   */
-  status: CellularStatusFlag
-  /**
-   * Failure reason when status in in CELLUAR_STATUS_FAILED
-   */
-  failureReason: CellularNetworkFailedReason
-  /**
-   * Cellular network radio type: gsm, cdma, lte...
-   */
-  type: CellularNetworkRadioType
-  /**
-   * Signal quality in percent. If unknown, set to UINT8_MAX
-   */
-  quality: uint8_t
-  /**
-   * Mobile country code. If unknown, set to UINT16_MAX
-   */
-  mcc: uint16_t
-  /**
-   * Mobile network code. If unknown, set to UINT16_MAX
-   */
-  mnc: uint16_t
-  /**
-   * Location area code. If unknown, set to 0
-   */
-  lac: uint16_t
 }
 
 /**
@@ -14801,6 +14648,35 @@ export class OpenDroneIdMessagePack extends MavLinkData {
   messages: uint8_t[]
 }
 
+/**
+ * Temperature and humidity from hygrometer.
+ */
+export class HygrometerSensor extends MavLinkData {
+  static MSG_ID = 12920
+  static MSG_NAME = 'HYGROMETER_SENSOR'
+  static PAYLOAD_LENGTH = 5
+  static MAGIC_NUMBER = 20
+
+  static FIELDS = [
+    new MavLinkPacketField('temperature', 0, false, 2, 'int16_t'),
+    new MavLinkPacketField('humidity', 2, false, 2, 'uint16_t'),
+    new MavLinkPacketField('id', 4, false, 1, 'uint8_t'),
+  ]
+
+  /**
+   * Hygrometer ID
+   */
+  id: uint8_t
+  /**
+   * Temperature
+   */
+  temperature: int16_t
+  /**
+   * Humidity
+   */
+  humidity: uint16_t
+}
+
 export const REGISTRY = {
   1: SysStatus,
   2: SystemTime,
@@ -14810,7 +14686,6 @@ export const REGISTRY = {
   7: AuthKey,
   8: LinkNodeStatus,
   11: SetMode,
-  19: ParamAckTransaction,
   20: ParamRequestRead,
   21: ParamRequestList,
   22: ParamValue,
@@ -14843,7 +14718,6 @@ export const REGISTRY = {
   49: GpsGlobalOrigin,
   50: ParamMapRc,
   51: MissionRequestInt,
-  52: MissionChanged,
   54: SafetySetAllowedArea,
   55: SafetyAllowedArea,
   61: AttitudeQuaternionCov,
@@ -14987,7 +14861,6 @@ export const REGISTRY = {
   331: Odometry,
   332: TrajectoryRepresentationWaypoints,
   333: TrajectoryRepresentationBezier,
-  334: CellularStatus,
   335: IsbdLinkStatus,
   336: CellularConfig,
   339: RawRpm,
@@ -15016,4 +14889,5 @@ export const REGISTRY = {
   12904: OpenDroneIdSystem,
   12905: OpenDroneIdOperatorId,
   12915: OpenDroneIdMessagePack,
+  12920: HygrometerSensor,
 }
