@@ -58,6 +58,8 @@ export enum SpeedType {
 export enum MavCmd {
   'DO_SET_RESUME_REPEAT_DIST'         = 215,
   'DO_SPRAYER'                        = 216,
+  'DO_SEND_SCRIPT_MESSAGE'            = 217,
+  'DO_AUX_FUNCTION'                   = 218,
   /**
    * Mission command to wait for an altitude or downwards vertical speed. This is meant for high altitude
    * balloon launches, allowing the aircraft to be idle until either an altitude is reached or a negative
@@ -75,6 +77,7 @@ export enum MavCmd {
    */
   'FIXED_MAG_CAL'                     = 42004,
   'FIXED_MAG_CAL_FIELD'               = 42005,
+  'SET_EKF_SOURCE_SET'                = 42007,
   'DO_START_MAG_CAL'                  = 42424,
   'DO_ACCEPT_MAG_CAL'                 = 42425,
   'DO_CANCEL_MAG_CAL'                 = 42426,
@@ -463,6 +466,15 @@ export enum GoproBurstRate {
 }
 
 /**
+ * MAV_CMD_DO_AUX_FUNCTION_SWITCH_LEVEL
+ */
+export enum MavCmdDoAuxFunctionSwitchLevel {
+  'LOW'                               = 0,
+  'MIDDLE'                            = 1,
+  'HIGH'                              = 2,
+}
+
+/**
  * LED_CONTROL_PATTERN
  */
 export enum LedControlPattern {
@@ -595,6 +607,7 @@ export enum CopterMode {
   'ZIGZAG'                            = 24,
   'SYSTEMID'                          = 25,
   'AUTOROTATE'                        = 26,
+  'AUTO_RTL'                          = 27,
 }
 
 /**
@@ -2351,7 +2364,7 @@ export class EkfStatusReport extends MavLinkData {
 export class PidTuning extends MavLinkData {
   static MSG_ID = 194
   static MSG_NAME = 'PID_TUNING'
-  static PAYLOAD_LENGTH = 25
+  static PAYLOAD_LENGTH = 33
   static MAGIC_NUMBER = 98
 
   static FIELDS = [
@@ -2362,6 +2375,8 @@ export class PidTuning extends MavLinkData {
     new MavLinkPacketField('I', 16, false, 4, 'float'),
     new MavLinkPacketField('D', 20, false, 4, 'float'),
     new MavLinkPacketField('axis', 24, false, 1, 'uint8_t'),
+    new MavLinkPacketField('SRate', 25, true, 4, 'float'),
+    new MavLinkPacketField('PDmod', 29, true, 4, 'float'),
   ]
 
   /**
@@ -2392,6 +2407,14 @@ export class PidTuning extends MavLinkData {
    * D component.
    */
   D: float
+  /**
+   * Slew rate.
+   */
+  SRate: float
+  /**
+   * P/D oscillation modifier.
+   */
+  PDmod: float
 }
 
 /**
@@ -3501,6 +3524,115 @@ export class ObstacleDistance3d extends MavLinkData {
   maxDistance: float
 }
 
+/**
+ * Water depth
+ */
+export class WaterDepth extends MavLinkData {
+  static MSG_ID = 11038
+  static MSG_NAME = 'WATER_DEPTH'
+  static PAYLOAD_LENGTH = 38
+  static MAGIC_NUMBER = 47
+
+  static FIELDS = [
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
+    new MavLinkPacketField('lat', 4, false, 4, 'int32_t'),
+    new MavLinkPacketField('lng', 8, false, 4, 'int32_t'),
+    new MavLinkPacketField('alt', 12, false, 4, 'float'),
+    new MavLinkPacketField('roll', 16, false, 4, 'float'),
+    new MavLinkPacketField('pitch', 20, false, 4, 'float'),
+    new MavLinkPacketField('yaw', 24, false, 4, 'float'),
+    new MavLinkPacketField('distance', 28, false, 4, 'float'),
+    new MavLinkPacketField('temperature', 32, false, 4, 'float'),
+    new MavLinkPacketField('id', 36, false, 1, 'uint8_t'),
+    new MavLinkPacketField('healthy', 37, false, 1, 'uint8_t'),
+  ]
+
+  /**
+   * Timestamp (time since system boot)
+   */
+  timeBootMs: uint32_t
+  /**
+   * Onboard ID of the sensor
+   */
+  id: uint8_t
+  /**
+   * Sensor data healthy (0=unhealthy, 1=healthy)
+   */
+  healthy: uint8_t
+  /**
+   * Latitude
+   */
+  lat: int32_t
+  /**
+   * Longitude
+   */
+  lng: int32_t
+  /**
+   * Altitude (MSL) of vehicle
+   */
+  alt: float
+  /**
+   * Roll angle
+   */
+  roll: float
+  /**
+   * Pitch angle
+   */
+  pitch: float
+  /**
+   * Yaw angle
+   */
+  yaw: float
+  /**
+   * Distance (uncorrected)
+   */
+  distance: float
+  /**
+   * Water temperature
+   */
+  temperature: float
+}
+
+/**
+ * The MCU status, giving MCU temperature and voltage. The min and max voltages are to allow for
+ * detecting power supply instability.
+ */
+export class McuStatus extends MavLinkData {
+  static MSG_ID = 11039
+  static MSG_NAME = 'MCU_STATUS'
+  static PAYLOAD_LENGTH = 9
+  static MAGIC_NUMBER = 142
+
+  static FIELDS = [
+    new MavLinkPacketField('MCUTemperature', 0, false, 2, 'int16_t'),
+    new MavLinkPacketField('MCUVoltage', 2, false, 2, 'uint16_t'),
+    new MavLinkPacketField('MCUVoltageMin', 4, false, 2, 'uint16_t'),
+    new MavLinkPacketField('MCUVoltageMax', 6, false, 2, 'uint16_t'),
+    new MavLinkPacketField('id', 8, false, 1, 'uint8_t'),
+  ]
+
+  /**
+   * MCU instance
+   */
+  id: uint8_t
+  /**
+   * MCU Internal temperature
+   */
+  MCUTemperature: int16_t
+  /**
+   * MCU voltage
+   */
+  MCUVoltage: uint16_t
+  /**
+   * MCU voltage minimum
+   */
+  MCUVoltageMin: uint16_t
+  /**
+   * MCU voltage maximum
+   */
+  MCUVoltageMax: uint16_t
+}
+
 export const REGISTRY = {
   150: SensorOffsets,
   151: SetMagOffsets,
@@ -3565,4 +3697,6 @@ export const REGISTRY = {
   11035: OsdParamShowConfig,
   11036: OsdParamShowConfigReply,
   11037: ObstacleDistance3d,
+  11038: WaterDepth,
+  11039: McuStatus,
 }

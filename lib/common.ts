@@ -139,7 +139,18 @@ export enum MavSysStatusSensor {
 }
 
 /**
- * MAV_FRAME
+ * Co-ordinate frames used by MAVLink. Not all frames are supported by all commands, messages, or
+ * vehicles. Global frames use the following naming conventions: - `GLOBAL`: Global co-ordinate frame
+ * with WGS84 latitude/longitude and altitude positive over mean sea level (MSL) by default. The
+ * following modifiers may be used with `GLOBAL`: - `RELATIVE_ALT`: Altitude is relative to the vehicle
+ * home position rather than MSL - `TERRAIN_ALT`: Altitude is relative to ground level rather than MSL
+ * - `INT`: Latitude/longitude (in degrees) are scaled by multiplying by 1E7 Local frames use the
+ * following naming conventions: - `LOCAL`: Origin of local frame is fixed relative to earth. Unless
+ * otherwise specified this origin is the origin of the vehicle position-estimator ("EKF"). - `BODY`:
+ * Origin of local frame travels with the vehicle. NOTE, `BODY` does NOT indicate alignment of frame
+ * axis with vehicle attitude. - `OFFSET`: Deprecated synonym for `BODY` (origin travels with the
+ * vehicle). Not to be used for new frames. Some deprecated frames do not follow these conventions
+ * (e.g. MAV_FRAME_BODY_NED and MAV_FRAME_BODY_OFFSET_NED).
  */
 export enum MavFrame {
   /**
@@ -157,31 +168,23 @@ export enum MavFrame {
   'GLOBAL_RELATIVE_ALT'                            = 3,
   'LOCAL_ENU'                                      = 4,
   /**
-   * Global (WGS84) coordinate frame (scaled) + MSL altitude. First value / x: latitude in
-   * degrees*1.0e-7, second value / y: longitude in degrees*1.0e-7, third value / z: positive altitude
-   * over mean sea level (MSL).
+   * Global (WGS84) coordinate frame (scaled) + MSL altitude. First value / x: latitude in degrees*1E7,
+   * second value / y: longitude in degrees*1E7, third value / z: positive altitude over mean sea level
+   * (MSL).
    */
   'GLOBAL_INT'                                     = 5,
   /**
    * Global (WGS84) coordinate frame (scaled) + altitude relative to the home position. First value / x:
-   * latitude in degrees*10e-7, second value / y: longitude in degrees*10e-7, third value / z: positive
+   * latitude in degrees*1E7, second value / y: longitude in degrees*1E7, third value / z: positive
    * altitude with 0 being at the altitude of the home location.
    */
   'GLOBAL_RELATIVE_ALT_INT'                        = 6,
-  /**
-   * Offset to the current local frame. Anything expressed in this frame should be added to the current
-   * local frame position.
-   */
   'LOCAL_OFFSET_NED'                               = 7,
   /**
-   * Setpoint in body NED frame. This makes sense if all position control is externalized - e.g. useful
-   * to command 2 m/s^2 acceleration to the right.
+   * Same as MAV_FRAME_LOCAL_NED when used to represent position values. Same as MAV_FRAME_BODY_FRD when
+   * used with velocity/accelaration values.
    */
   'BODY_NED'                                       = 8,
-  /**
-   * Offset in body NED frame. This makes sense if adding setpoints to the current flight path, to avoid
-   * an obstacle - e.g. useful to command 2 m/s^2 acceleration to the east.
-   */
   'BODY_OFFSET_NED'                                = 9,
   /**
    * Global (WGS84) coordinate frame with AGL altitude (at the waypoint coordinate). First value / x:
@@ -191,10 +194,14 @@ export enum MavFrame {
   'GLOBAL_TERRAIN_ALT'                             = 10,
   /**
    * Global (WGS84) coordinate frame (scaled) with AGL altitude (at the waypoint coordinate). First value
-   * / x: latitude in degrees*10e-7, second value / y: longitude in degrees*10e-7, third value / z:
-   * positive altitude in meters with 0 being at ground level in terrain model.
+   * / x: latitude in degrees*1E7, second value / y: longitude in degrees*1E7, third value / z: positive
+   * altitude in meters with 0 being at ground level in terrain model.
    */
   'GLOBAL_TERRAIN_ALT_INT'                         = 11,
+  /**
+   * FRD local tangent frame (x: Forward, y: Right, z: Down) with origin that travels with vehicle. The
+   * forward axis is aligned to the front of the vehicle in the horizontal plane.
+   */
   'BODY_FRD'                                       = 12,
   'RESERVED_13'                                    = 13,
   /**
@@ -228,13 +235,13 @@ export enum MavFrame {
    */
   'RESERVED_19'                                    = 19,
   /**
-   * Forward, Right, Down coordinate frame. This is a local frame with Z-down and arbitrary F/R alignment
-   * (i.e. not aligned with NED/earth frame).
+   * FRD local tangent frame (x: Forward, y: Right, z: Down) with origin fixed relative to earth. The
+   * forward axis is aligned to the front of the vehicle in the horizontal plane.
    */
   'LOCAL_FRD'                                      = 20,
   /**
-   * Forward, Left, Up coordinate frame. This is a local frame with Z-up and arbitrary F/L alignment
-   * (i.e. not aligned with ENU/earth frame).
+   * FLU local tangent frame (x: Forward, y: Left, z: Up) with origin fixed relative to earth. The
+   * forward axis is aligned to the front of the vehicle in the horizontal plane.
    */
   'LOCAL_FLU'                                      = 21,
 }
@@ -1989,6 +1996,11 @@ export enum MavOdidIdType {
   'SERIAL_NUMBER'                                  = 1,
   'CAA_REGISTRATION_ID'                            = 2,
   'UTM_ASSIGNED_UUID'                              = 3,
+  /**
+   * A 20 byte ID for a specific flight/session. The exact ID type is indicated by the first byte of
+   * uas_id and these type values are managed by ICAO.
+   */
+  'SPECIFIC_SESSION_ID'                            = 4,
 }
 
 /**
@@ -2105,6 +2117,11 @@ export enum MavOdidAuthType {
   'OPERATOR_ID_SIGNATURE'                          = 2,
   'MESSAGE_SET_SIGNATURE'                          = 3,
   'NETWORK_REMOTE_ID'                              = 4,
+  /**
+   * The exact authentication type is indicated by the first byte of authentication_data and these type
+   * values are managed by ICAO.
+   */
+  'SPECIFIC_AUTHENTICATION'                        = 5,
 }
 
 /**
@@ -14361,7 +14378,7 @@ export class OpenDroneIdLocation extends MavLinkData {
   /**
    * Seconds after the full hour with reference to UTC time. Typically the GPS outputs a time-of-week
    * value in milliseconds. First convert that to UTC and then convert for this field using ((float)
-   * (time_week_ms % (60*60*1000))) / 1000.
+   * (time_week_ms % (60*60*1000))) / 1000. If unknown: 0xFFFF.
    */
   timestamp: float
   /**
@@ -14375,14 +14392,14 @@ export class OpenDroneIdLocation extends MavLinkData {
  * that can provide a means of authenticity for the identity of the UAS (Unmanned Aircraft System). The
  * Authentication message can have two different formats. Five data pages are supported. For data page
  * 0, the fields PageCount, Length and TimeStamp are present and AuthData is only 17 bytes. For data
- * page 1 through 4, PageCount, Length and TimeStamp are not present and the size of AuthData is 23
+ * page 1 through 15, PageCount, Length and TimeStamp are not present and the size of AuthData is 23
  * bytes.
  */
 export class OpenDroneIdAuthentication extends MavLinkData {
   static MSG_ID = 12902
   static MSG_NAME = 'OPEN_DRONE_ID_AUTHENTICATION'
   static PAYLOAD_LENGTH = 53
-  static MAGIC_NUMBER = 49
+  static MAGIC_NUMBER = 140
 
   static FIELDS = [
     new MavLinkPacketField('timestamp', 0, false, 4, 'uint32_t'),
@@ -14391,7 +14408,7 @@ export class OpenDroneIdAuthentication extends MavLinkData {
     new MavLinkPacketField('idOrMac', 6, false, 1, 'uint8_t[]', 20),
     new MavLinkPacketField('authenticationType', 26, false, 1, 'uint8_t'),
     new MavLinkPacketField('dataPage', 27, false, 1, 'uint8_t'),
-    new MavLinkPacketField('pageCount', 28, false, 1, 'uint8_t'),
+    new MavLinkPacketField('lastPageIndex', 28, false, 1, 'uint8_t'),
     new MavLinkPacketField('length', 29, false, 1, 'uint8_t'),
     new MavLinkPacketField('authenticationData', 30, false, 1, 'uint8_t[]', 23),
   ]
@@ -14414,16 +14431,19 @@ export class OpenDroneIdAuthentication extends MavLinkData {
    */
   authenticationType: MavOdidAuthType
   /**
-   * Allowed range is 0 - 4.
+   * Allowed range is 0 - 15.
    */
   dataPage: uint8_t
   /**
-   * This field is only present for page 0. Allowed range is 0 - 5.
+   * This field is only present for page 0. Allowed range is 0 - 15. See the description of struct
+   * ODID_Auth_data at
+   * https://github.com/opendroneid/opendroneid-core-c/blob/master/libopendroneid/opendroneid.h.
    */
-  pageCount: uint8_t
+  lastPageIndex: uint8_t
   /**
-   * This field is only present for page 0. Total bytes of authentication_data from all data pages.
-   * Allowed range is 0 - 109 (17 + 23*4).
+   * This field is only present for page 0. Total bytes of authentication_data from all data pages. See
+   * the description of struct ODID_Auth_data at
+   * https://github.com/opendroneid/opendroneid-core-c/blob/master/libopendroneid/opendroneid.h.
    */
   length: uint8_t
   /**
@@ -14488,23 +14508,24 @@ export class OpenDroneIdSelfId extends MavLinkData {
 export class OpenDroneIdSystem extends MavLinkData {
   static MSG_ID = 12904
   static MSG_NAME = 'OPEN_DRONE_ID_SYSTEM'
-  static PAYLOAD_LENGTH = 46
-  static MAGIC_NUMBER = 203
+  static PAYLOAD_LENGTH = 50
+  static MAGIC_NUMBER = 150
 
   static FIELDS = [
     new MavLinkPacketField('operatorLatitude', 0, false, 4, 'int32_t'),
     new MavLinkPacketField('operatorLongitude', 4, false, 4, 'int32_t'),
     new MavLinkPacketField('areaCeiling', 8, false, 4, 'float'),
     new MavLinkPacketField('areaFloor', 12, false, 4, 'float'),
-    new MavLinkPacketField('areaCount', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('areaRadius', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 21, false, 1, 'uint8_t'),
-    new MavLinkPacketField('idOrMac', 22, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('operatorLocationType', 42, false, 1, 'uint8_t'),
-    new MavLinkPacketField('classificationType', 43, false, 1, 'uint8_t'),
-    new MavLinkPacketField('categoryEu', 44, false, 1, 'uint8_t'),
-    new MavLinkPacketField('classEu', 45, false, 1, 'uint8_t'),
+    new MavLinkPacketField('operatorAltitudeGeo', 16, false, 4, 'float'),
+    new MavLinkPacketField('areaCount', 20, false, 2, 'uint16_t'),
+    new MavLinkPacketField('areaRadius', 22, false, 2, 'uint16_t'),
+    new MavLinkPacketField('targetSystem', 24, false, 1, 'uint8_t'),
+    new MavLinkPacketField('targetComponent', 25, false, 1, 'uint8_t'),
+    new MavLinkPacketField('idOrMac', 26, false, 1, 'uint8_t[]', 20),
+    new MavLinkPacketField('operatorLocationType', 46, false, 1, 'uint8_t'),
+    new MavLinkPacketField('classificationType', 47, false, 1, 'uint8_t'),
+    new MavLinkPacketField('categoryEu', 48, false, 1, 'uint8_t'),
+    new MavLinkPacketField('classEu', 49, false, 1, 'uint8_t'),
   ]
 
   /**
@@ -14560,6 +14581,10 @@ export class OpenDroneIdSystem extends MavLinkData {
    * When classification_type is MAV_ODID_CLASSIFICATION_TYPE_EU, specifies the class of the UA.
    */
   classEu: MavOdidClassEu
+  /**
+   * Geodetic altitude of the operator relative to WGS84. If unknown: -1000 m.
+   */
+  operatorAltitudeGeo: float
 }
 
 /**
@@ -14613,15 +14638,16 @@ export class OpenDroneIdOperatorId extends MavLinkData {
 export class OpenDroneIdMessagePack extends MavLinkData {
   static MSG_ID = 12915
   static MSG_NAME = 'OPEN_DRONE_ID_MESSAGE_PACK'
-  static PAYLOAD_LENGTH = 254
-  static MAGIC_NUMBER = 62
+  static PAYLOAD_LENGTH = 249
+  static MAGIC_NUMBER = 94
 
   static FIELDS = [
     new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
     new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('singleMessageSize', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('msgPackSize', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('messages', 4, false, 1, 'uint8_t[]', 250),
+    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', 20),
+    new MavLinkPacketField('singleMessageSize', 22, false, 1, 'uint8_t'),
+    new MavLinkPacketField('msgPackSize', 23, false, 1, 'uint8_t'),
+    new MavLinkPacketField('messages', 24, false, 1, 'uint8_t[]', 225),
   ]
 
   /**
@@ -14633,12 +14659,17 @@ export class OpenDroneIdMessagePack extends MavLinkData {
    */
   targetComponent: uint8_t
   /**
+   * Only used for drone ID data received from other UAs. See detailed description at
+   * https://mavlink.io/en/services/opendroneid.html.
+   */
+  idOrMac: uint8_t[]
+  /**
    * This field must currently always be equal to 25 (bytes), since all encoded OpenDroneID messages are
    * specificed to have this length.
    */
   singleMessageSize: uint8_t
   /**
-   * Number of encoded messages in the pack (not the number of bytes). Allowed range is 1 - 10.
+   * Number of encoded messages in the pack (not the number of bytes). Allowed range is 1 - 9.
    */
   msgPackSize: uint8_t
   /**
