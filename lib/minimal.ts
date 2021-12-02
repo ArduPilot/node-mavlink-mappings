@@ -34,6 +34,7 @@ export enum MavAutopilot {
   'ASLUAV'                                       = 17,
   'SMARTAP'                                      = 18,
   'AIRRAILS'                                     = 19,
+  'REFLEX'                                       = 20,
 }
 
 /**
@@ -80,6 +81,10 @@ export enum MavType {
   'DECAROTOR'                                    = 35,
   'BATTERY'                                      = 36,
   'PARACHUTE'                                    = 37,
+  'LOG'                                          = 38,
+  'OSD'                                          = 39,
+  'IMU'                                          = 40,
+  'GPS'                                          = 41,
 }
 
 /**

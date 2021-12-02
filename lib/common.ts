@@ -140,15 +140,15 @@ export enum MavSysStatusSensor {
 
 /**
  * Co-ordinate frames used by MAVLink. Not all frames are supported by all commands, messages, or
- * vehicles. Global frames use the following naming conventions: - `GLOBAL`: Global co-ordinate frame
+ * vehicles. Global frames use the following naming conventions: - "GLOBAL": Global co-ordinate frame
  * with WGS84 latitude/longitude and altitude positive over mean sea level (MSL) by default. The
- * following modifiers may be used with `GLOBAL`: - `RELATIVE_ALT`: Altitude is relative to the vehicle
- * home position rather than MSL - `TERRAIN_ALT`: Altitude is relative to ground level rather than MSL
- * - `INT`: Latitude/longitude (in degrees) are scaled by multiplying by 1E7 Local frames use the
- * following naming conventions: - `LOCAL`: Origin of local frame is fixed relative to earth. Unless
- * otherwise specified this origin is the origin of the vehicle position-estimator ("EKF"). - `BODY`:
- * Origin of local frame travels with the vehicle. NOTE, `BODY` does NOT indicate alignment of frame
- * axis with vehicle attitude. - `OFFSET`: Deprecated synonym for `BODY` (origin travels with the
+ * following modifiers may be used with "GLOBAL": - "RELATIVE_ALT": Altitude is relative to the vehicle
+ * home position rather than MSL. - "TERRAIN_ALT": Altitude is relative to ground level rather than
+ * MSL. - "INT": Latitude/longitude (in degrees) are scaled by multiplying by 1E7. Local frames use the
+ * following naming conventions: - "LOCAL": Origin of local frame is fixed relative to earth. Unless
+ * otherwise specified this origin is the origin of the vehicle position-estimator ("EKF"). - "BODY":
+ * Origin of local frame travels with the vehicle. NOTE, "BODY" does NOT indicate alignment of frame
+ * axis with vehicle attitude. - "OFFSET": Deprecated synonym for "BODY" (origin travels with the
  * vehicle). Not to be used for new frames. Some deprecated frames do not follow these conventions
  * (e.g. MAV_FRAME_BODY_NED and MAV_FRAME_BODY_OFFSET_NED).
  */
@@ -337,9 +337,8 @@ export enum GimbalDeviceCapFlags {
 
 /**
  * Gimbal manager high level capability flags (bitmap). The first 16 bits are identical to the
- * GIMBAL_DEVICE_CAP_FLAGS which are identical with GIMBAL_DEVICE_FLAGS. However, the gimbal manager
- * does not need to copy the flags from the gimbal but can also enhance the capabilities and thus add
- * flags.
+ * GIMBAL_DEVICE_CAP_FLAGS. However, the gimbal manager does not need to copy the flags from the gimbal
+ * but can also enhance the capabilities and thus add flags.
  */
 export enum GimbalManagerCapFlags {
   'HAS_RETRACT'                                    = 1,
@@ -388,7 +387,7 @@ export enum GimbalDeviceFlags {
 }
 
 /**
- * Flags for high level gimbal manager operation The first 16 bytes are identical to the
+ * Flags for high level gimbal manager operation The first 16 bits are identical to the
  * GIMBAL_DEVICE_FLAGS.
  */
 export enum GimbalManagerFlags {
@@ -508,6 +507,17 @@ export enum StorageType {
 }
 
 /**
+ * Flags to indicate usage for a particular storage (see STORAGE_INFORMATION.storage_usage and
+ * MAV_CMD_SET_STORAGE_USAGE).
+ */
+export enum StorageUsageFlag {
+  'SET'                                            = 1,
+  'PHOTO'                                          = 2,
+  'VIDEO'                                          = 4,
+  'LOGS'                                           = 8,
+}
+
+/**
  * Yaw behaviour during orbit flight.
  */
 export enum OrbitYawBehaviour {
@@ -567,6 +577,63 @@ export enum CompMetadataType {
   'COMMANDS'                                       = 2,
   'PERIPHERALS'                                    = 3,
   'EVENTS'                                         = 4,
+  'ACTUATORS'                                      = 5,
+}
+
+/**
+ * Actuator configuration, used to change a setting on an actuator. Component information metadata can
+ * be used to know which outputs support which commands.
+ */
+export enum ActuatorConfiguration {
+  'NONE'                                           = 0,
+  'BEEP'                                           = 1,
+  'ACTUATOR_CONFIGURATION_3D_MODE_ON'              = 2,
+  'ACTUATOR_CONFIGURATION_3D_MODE_OFF'             = 3,
+  /**
+   * Permanently set the actuator (ESC) to spin direction 1 (which can be clockwise or
+   * counter-clockwise).
+   */
+  'SPIN_DIRECTION1'                                = 4,
+  'SPIN_DIRECTION2'                                = 5,
+}
+
+/**
+ * Actuator output function. Values greater or equal to 1000 are autopilot-specific.
+ */
+export enum ActuatorOutputFunction {
+  'NONE'                                           = 0,
+  'MOTOR1'                                         = 1,
+  'MOTOR2'                                         = 2,
+  'MOTOR3'                                         = 3,
+  'MOTOR4'                                         = 4,
+  'MOTOR5'                                         = 5,
+  'MOTOR6'                                         = 6,
+  'MOTOR7'                                         = 7,
+  'MOTOR8'                                         = 8,
+  'MOTOR9'                                         = 9,
+  'MOTOR10'                                        = 10,
+  'MOTOR11'                                        = 11,
+  'MOTOR12'                                        = 12,
+  'MOTOR13'                                        = 13,
+  'MOTOR14'                                        = 14,
+  'MOTOR15'                                        = 15,
+  'MOTOR16'                                        = 16,
+  'SERVO1'                                         = 33,
+  'SERVO2'                                         = 34,
+  'SERVO3'                                         = 35,
+  'SERVO4'                                         = 36,
+  'SERVO5'                                         = 37,
+  'SERVO6'                                         = 38,
+  'SERVO7'                                         = 39,
+  'SERVO8'                                         = 40,
+  'SERVO9'                                         = 41,
+  'SERVO10'                                        = 42,
+  'SERVO11'                                        = 43,
+  'SERVO12'                                        = 44,
+  'SERVO13'                                        = 45,
+  'SERVO14'                                        = 46,
+  'SERVO15'                                        = 47,
+  'SERVO16'                                        = 48,
 }
 
 /**
@@ -802,13 +869,6 @@ export enum MavCmd {
   'PREFLIGHT_STORAGE'                              = 245,
   'PREFLIGHT_REBOOT_SHUTDOWN'                      = 246,
   /**
-   * Request a target system to start an upgrade of one (or all) of its components. For example, the
-   * command might be sent to a companion computer to cause it to upgrade a connected flight controller.
-   * The system doing the upgrade will report progress using the normal command protocol sequence for a
-   * long running operation. Command protocol information: https://mavlink.io/en/services/command.html.
-   */
-  'DO_UPGRADE'                                     = 247,
-  /**
    * Override current mission with command to pause mission, pause mission and move to position,
    * continue/resume mission. When param 1 indicates that the mission is paused (MAV_GOTO_DO_HOLD), param
    * 2 defines whether it holds in place or moves to another position.
@@ -824,6 +884,13 @@ export enum MavCmd {
    */
   'OBLIQUE_SURVEY'                                 = 260,
   'MISSION_START'                                  = 300,
+  /**
+   * Actuator testing command. This is similar to MAV_CMD_DO_MOTOR_TEST but operates on the level of
+   * output functions, i.e. it is possible to test Motor1 independent from which output it is configured
+   * on. Autopilots typically refuse this command while armed.
+   */
+  'ACTUATOR_TEST'                                  = 310,
+  'CONFIGURE_ACTUATOR'                             = 311,
   'COMPONENT_ARM_DISARM'                           = 400,
   /**
    * Instructs system to run pre-arm checks. This command should return MAV_RESULT_TEMPORARILY_REJECTED
@@ -894,6 +961,16 @@ export enum MavCmd {
   'SET_CAMERA_MODE'                                = 530,
   'SET_CAMERA_ZOOM'                                = 531,
   'SET_CAMERA_FOCUS'                               = 532,
+  /**
+   * Set that a particular storage is the preferred location for saving photos, videos, and/or other
+   * media (e.g. to set that an SD card is used for storing videos). There can only be one preferred save
+   * location for each particular media type: setting a media usage flag will clear/reset that same flag
+   * if set on any other storage. If no flag is set the system should use its default storage. A target
+   * system can choose to always use default storage, in which case it should ACK the command with
+   * MAV_RESULT_UNSUPPORTED. A target system can choose to not allow a particular storage to be set as
+   * preferred storage, in which case it should ACK the command with MAV_RESULT_DENIED.
+   */
+  'SET_STORAGE_USAGE'                              = 533,
   'JUMP_TAG'                                       = 600,
   /**
    * Jump to the matching tag in the mission list. Repeat this action for the specified number of times.
@@ -1836,6 +1913,9 @@ export enum SetFocusType {
    * reliably be used in a GCS for an arbitrary camera).
    */
   'METERS'                                         = 3,
+  'AUTO'                                           = 4,
+  'AUTO_SINGLE'                                    = 5,
+  'AUTO_CONTINUOUS'                                = 6,
 }
 
 /**
@@ -1947,6 +2027,62 @@ export enum UtmDataAvailFlags {
   'HORIZONTAL_VELO_AVAILABLE'                      = 32,
   'VERTICAL_VELO_AVAILABLE'                        = 64,
   'NEXT_WAYPOINT_AVAILABLE'                        = 128,
+}
+
+/**
+ * These flags encode the cellular network status
+ */
+export enum CellularStatusFlag {
+  'UNKNOWN'                                        = 0,
+  'FAILED'                                         = 1,
+  'INITIALIZING'                                   = 2,
+  'LOCKED'                                         = 3,
+  'DISABLED'                                       = 4,
+  'DISABLING'                                      = 5,
+  'ENABLING'                                       = 6,
+  /**
+   * Modem is enabled and powered on but not registered with a network provider and not available for
+   * data connections
+   */
+  'ENABLED'                                        = 7,
+  'SEARCHING'                                      = 8,
+  /**
+   * Modem is registered with a network provider, and data connections and messaging may be available for
+   * use
+   */
+  'REGISTERED'                                     = 9,
+  /**
+   * Modem is disconnecting and deactivating the last active packet data bearer. This state will not be
+   * entered if more than one packet data bearer is active and one of the active bearers is deactivated
+   */
+  'DISCONNECTING'                                  = 10,
+  /**
+   * Modem is activating and connecting the first packet data bearer. Subsequent bearer activations when
+   * another bearer is already active do not cause this state to be entered
+   */
+  'CONNECTING'                                     = 11,
+  'CONNECTED'                                      = 12,
+}
+
+/**
+ * These flags are used to diagnose the failure state of CELLULAR_STATUS
+ */
+export enum CellularNetworkFailedReason {
+  'NONE'                                           = 0,
+  'UNKNOWN'                                        = 1,
+  'SIM_MISSING'                                    = 2,
+  'SIM_ERROR'                                      = 3,
+}
+
+/**
+ * Cellular network radio type
+ */
+export enum CellularNetworkRadioType {
+  'NONE'                                           = 0,
+  'GSM'                                            = 1,
+  'CDMA'                                           = 2,
+  'WCDMA'                                          = 3,
+  'LTE'                                            = 4,
 }
 
 /**
@@ -2192,14 +2328,6 @@ export enum TuneFormat {
 }
 
 /**
- * Component capability flags (Bitmap)
- */
-export enum ComponentCapFlags {
-  'PARAM'                                          = 1,
-  'PARAM_EXT'                                      = 2,
-}
-
-/**
  * Type of AIS vessel, enum duplicated from AIS standard, https://gpsd.gitlab.io/gpsd/AIVDM.html
  */
 export enum AisType {
@@ -2441,6 +2569,48 @@ export enum MavEventErrorReason {
  */
 export enum MavEventCurrentSequenceFlags {
   'RESET'                                          = 1,
+}
+
+/**
+ * Flags in the HIL_SENSOR message indicate which fields have updated since the last message
+ */
+export enum HilSensorUpdatedFlags {
+  'NONE'                                           = 0,
+  'XACC'                                           = 1,
+  'YACC'                                           = 2,
+  'ZACC'                                           = 4,
+  'XGYRO'                                          = 8,
+  'YGYRO'                                          = 16,
+  'ZGYRO'                                          = 32,
+  'XMAG'                                           = 64,
+  'YMAG'                                           = 128,
+  'ZMAG'                                           = 256,
+  'ABS_PRESSURE'                                   = 512,
+  'DIFF_PRESSURE'                                  = 1024,
+  'PRESSURE_ALT'                                   = 2048,
+  'TEMPERATURE'                                    = 4096,
+  'RESET'                                          = 2147483648,
+}
+
+/**
+ * Flags in the HIGHRES_IMU message indicate which fields have updated since the last message
+ */
+export enum HighresImuUpdatedFlags {
+  'NONE'                                           = 0,
+  'XACC'                                           = 1,
+  'YACC'                                           = 2,
+  'ZACC'                                           = 4,
+  'XGYRO'                                          = 8,
+  'YGYRO'                                          = 16,
+  'ZGYRO'                                          = 32,
+  'XMAG'                                           = 64,
+  'YMAG'                                           = 128,
+  'ZMAG'                                           = 256,
+  'ABS_PRESSURE'                                   = 512,
+  'DIFF_PRESSURE'                                  = 1024,
+  'PRESSURE_ALT'                                   = 2048,
+  'TEMPERATURE'                                    = 4096,
+  'ALL'                                            = 65535,
 }
 
 /**
@@ -2951,8 +3121,8 @@ export class ParamSet extends MavLinkData {
 
 /**
  * The global position, as returned by the Global Positioning System (GPS). This is NOT the global
- * position estimate of the system, but rather a RAW sensor value. See message GLOBAL_POSITION for the
- * global position estimate.
+ * position estimate of the system, but rather a RAW sensor value. See message GLOBAL_POSITION_INT for
+ * the global position estimate.
  */
 export class GpsRawInt extends MavLinkData {
   static MSG_ID = 24
@@ -3051,8 +3221,8 @@ export class GpsRawInt extends MavLinkData {
 
 /**
  * The positioning status, as reported by GPS. This message is intended to display status information
- * about each satellite visible to the receiver. See message GLOBAL_POSITION for the global position
- * estimate. This message can contain information for up to 20 satellites.
+ * about each satellite visible to the receiver. See message GLOBAL_POSITION_INT for the global
+ * position estimate. This message can contain information for up to 20 satellites.
  */
 export class GpsStatus extends MavLinkData {
   static MSG_ID = 25
@@ -6805,9 +6975,9 @@ export class HighresImu extends MavLinkData {
    */
   temperature: float
   /**
-   * Bitmap for fields that have updated since last message, bit 0 = xacc, bit 12: temperature
+   * Bitmap for fields that have updated since last message
    */
-  fieldsUpdated: uint16_t
+  fieldsUpdated: HighresImuUpdatedFlags
   /**
    * Id. Ids are numbered from 0 and map to IMUs numbered from 1 (e.g. IMU1 will have a message with
    * id=0)
@@ -6980,10 +7150,9 @@ export class HilSensor extends MavLinkData {
    */
   temperature: float
   /**
-   * Bitmap for fields that have updated since last message, bit 0 = xacc, bit 12: temperature, bit 31:
-   * full reset of attitude/position/velocities/etc was performed in sim.
+   * Bitmap for fields that have updated since last message
    */
-  fieldsUpdated: uint32_t
+  fieldsUpdated: HilSensorUpdatedFlags
   /**
    * Sensor ID (zero indexed). Used for multiple sensor inputs
    */
@@ -7250,8 +7419,8 @@ export class CameraTrigger extends MavLinkData {
 
 /**
  * The global position, as returned by the Global Positioning System (GPS). This is NOT the global
- * position estimate of the sytem, but rather a RAW sensor value. See message GLOBAL_POSITION for the
- * global position estimate.
+ * position estimate of the sytem, but rather a RAW sensor value. See message GLOBAL_POSITION_INT for
+ * the global position estimate.
  */
 export class HilGps extends MavLinkData {
   static MSG_ID = 113
@@ -7963,7 +8132,7 @@ export class PowerStatus extends MavLinkData {
 export class SerialControl extends MavLinkData {
   static MSG_ID = 126
   static MSG_NAME = 'SERIAL_CONTROL'
-  static PAYLOAD_LENGTH = 79
+  static PAYLOAD_LENGTH = 81
   static MAGIC_NUMBER = 220
 
   static FIELDS = [
@@ -7973,6 +8142,8 @@ export class SerialControl extends MavLinkData {
     new MavLinkPacketField('flags', 7, false, 1, 'uint8_t'),
     new MavLinkPacketField('count', 8, false, 1, 'uint8_t'),
     new MavLinkPacketField('data', 9, false, 1, 'uint8_t[]', 70),
+    new MavLinkPacketField('targetSystem', 79, true, 1, 'uint8_t'),
+    new MavLinkPacketField('targetComponent', 80, true, 1, 'uint8_t'),
   ]
 
   /**
@@ -7999,6 +8170,14 @@ export class SerialControl extends MavLinkData {
    * serial data
    */
   data: uint8_t[]
+  /**
+   * System ID
+   */
+  targetSystem: uint8_t
+  /**
+   * Component ID
+   */
+  targetComponent: uint8_t
 }
 
 /**
@@ -9147,7 +9326,8 @@ export class AutopilotVersion extends MavLinkData {
    */
   osSwVersion: uint32_t
   /**
-   * HW / board version (last 8 bytes should be silicon ID, if any)
+   * HW / board version (last 8 bits should be silicon ID, if any). The first 16 bits of this field
+   * specify https://github.com/PX4/PX4-Bootloader/blob/master/board_types.txt
    */
   boardVersion: uint32_t
   /**
@@ -10971,7 +11151,7 @@ export class CameraSettings extends MavLinkData {
 export class StorageInformation extends MavLinkData {
   static MSG_ID = 261
   static MSG_NAME = 'STORAGE_INFORMATION'
-  static PAYLOAD_LENGTH = 60
+  static PAYLOAD_LENGTH = 61
   static MAGIC_NUMBER = 179
 
   static FIELDS = [
@@ -10986,6 +11166,7 @@ export class StorageInformation extends MavLinkData {
     new MavLinkPacketField('status', 26, false, 1, 'uint8_t'),
     new MavLinkPacketField('type', 27, true, 1, 'uint8_t'),
     new MavLinkPacketField('name', 28, true, 1, 'char[]', 32),
+    new MavLinkPacketField('storageUsage', 60, true, 1, 'uint8_t'),
   ]
 
   /**
@@ -11034,6 +11215,14 @@ export class StorageInformation extends MavLinkData {
    * generic type is shown to the user.
    */
   name: string
+  /**
+   * Flags indicating whether this instance is preferred storage for photos, videos, etc. Note:
+   * Implementations should initially set the flags on the system-default storage id used for saving
+   * media (if possible/supported). This setting can then be overridden using MAV_CMD_SET_STORAGE_USAGE.
+   * If the media usage flags are not set, a GCS may assume storage ID 1 is the default storage for all
+   * media types.
+   */
+  storageUsage: StorageUsageFlag
 }
 
 /**
@@ -11088,9 +11277,14 @@ export class CameraCaptureStatus extends MavLinkData {
 }
 
 /**
- * Information about a captured image. This is emitted every time a message is captured. It may be
- * re-requested using MAV_CMD_REQUEST_MESSAGE, using param2 to indicate the sequence number for the
- * missing image.
+ * Information about a captured image. This is emitted every time a message is captured.
+ * MAV_CMD_REQUEST_MESSAGE can be used to (re)request this message for a specific sequence number or
+ * range of sequence numbers: MAV_CMD_REQUEST_MESSAGE.param2 indicates the sequence number the first
+ * image to send, or set to -1 to send the message for all sequence numbers.
+ * MAV_CMD_REQUEST_MESSAGE.param3 is used to specify a range of messages to send: set to 0 (default) to
+ * send just the the message for the sequence number in param 2, set to -1 to send the message for the
+ * sequence number in param 2 and all the following sequence numbers, set to the sequence number of the
+ * final message in the range.
  */
 export class CameraImageCaptured extends MavLinkData {
   static MSG_ID = 263
@@ -12018,9 +12212,10 @@ export class GimbalDeviceSetAttitude extends MavLinkData {
 
 /**
  * Message reporting the status of a gimbal device. This message should be broadcasted by a gimbal
- * device component. The angles encoded in the quaternion are in the global frame (roll: positive is
- * rolling to the right, pitch: positive is pitching up, yaw is turn to the right). This message should
- * be broadcast at a low regular rate (e.g. 10Hz).
+ * device component. The angles encoded in the quaternion are relative to absolute North if the flag
+ * GIMBAL_DEVICE_FLAGS_YAW_LOCK is set (roll: positive is rolling to the right, pitch: positive is
+ * pitching up, yaw is turn to the right) or relative to the vehicle heading if the flag is not set.
+ * This message should be broadcast at a low regular rate (e.g. 10Hz).
  */
 export class GimbalDeviceAttitudeStatus extends MavLinkData {
   static MSG_ID = 285
@@ -13120,6 +13315,55 @@ export class TrajectoryRepresentationBezier extends MavLinkData {
    * Yaw. Set to NaN for unchanged
    */
   posYaw: float[]
+}
+
+/**
+ * Report current used cellular network status
+ */
+export class CellularStatus extends MavLinkData {
+  static MSG_ID = 334
+  static MSG_NAME = 'CELLULAR_STATUS'
+  static PAYLOAD_LENGTH = 10
+  static MAGIC_NUMBER = 72
+
+  static FIELDS = [
+    new MavLinkPacketField('mcc', 0, false, 2, 'uint16_t'),
+    new MavLinkPacketField('mnc', 2, false, 2, 'uint16_t'),
+    new MavLinkPacketField('lac', 4, false, 2, 'uint16_t'),
+    new MavLinkPacketField('status', 6, false, 1, 'uint8_t'),
+    new MavLinkPacketField('failureReason', 7, false, 1, 'uint8_t'),
+    new MavLinkPacketField('type', 8, false, 1, 'uint8_t'),
+    new MavLinkPacketField('quality', 9, false, 1, 'uint8_t'),
+  ]
+
+  /**
+   * Cellular modem status
+   */
+  status: CellularStatusFlag
+  /**
+   * Failure reason when status in in CELLUAR_STATUS_FAILED
+   */
+  failureReason: CellularNetworkFailedReason
+  /**
+   * Cellular network radio type: gsm, cdma, lte...
+   */
+  type: CellularNetworkRadioType
+  /**
+   * Signal quality in percent. If unknown, set to UINT8_MAX
+   */
+  quality: uint8_t
+  /**
+   * Mobile country code. If unknown, set to UINT16_MAX
+   */
+  mcc: uint16_t
+  /**
+   * Mobile network code. If unknown, set to UINT16_MAX
+   */
+  mnc: uint16_t
+  /**
+   * Location area code. If unknown, set to 0
+   */
+  lac: uint16_t
 }
 
 /**
@@ -14892,6 +15136,7 @@ export const REGISTRY = {
   331: Odometry,
   332: TrajectoryRepresentationWaypoints,
   333: TrajectoryRepresentationBezier,
+  334: CellularStatus,
   335: IsbdLinkStatus,
   336: CellularConfig,
   339: RawRpm,
