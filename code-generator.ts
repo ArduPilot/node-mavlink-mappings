@@ -452,7 +452,7 @@ function generate(name: string, obj: any, output: Writter) {
 }
 
 async function main() {
-  const parts = [ 'minimal', 'common', 'ardupilotmega', 'uavionix', 'icarous' ]
+  const parts = [ 'minimal', 'common', 'ardupilotmega', 'uavionix', 'icarous', 'asluav' ]
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]

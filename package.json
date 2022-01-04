@@ -1,6 +1,6 @@
 {
   "name": "mavlink-mappings",
-  "version": "1.0.1-20220104.2",
+  "version": "1.0.2-20220104",
   "author": "Matthias Hryniszak <padcom@gmail.com>",
   "license": "LGPL",
   "description": "MavLink message definitions",
@@ -30,7 +30,8 @@
     "get:ardupilotmega": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/ardupilotmega.xml -O ardupilotmega.xml",
     "get:uavionix": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/uAvionix.xml -O uavionix.xml",
     "get:icarous": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/icarous.xml -O icarous.xml",
-    "regenerate": "npm run get:minimal && npm run get:common && npm run get:ardupilotmega && npm run get:uavionix && npm run get:icarous && npm run code-generator && npm run transpile"
+    "get:asluav": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/ASLUAV.xml -O asluav.xml",
+    "regenerate": "npm run get:minimal && npm run get:common && npm run get:ardupilotmega && npm run get:uavionix && npm run get:icarous && npm run get:asluav && npm run code-generator && npm run transpile"
   },
   "devDependencies": {
     "@types/node": "^15.0.1",
