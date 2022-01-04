@@ -9,7 +9,7 @@ import {
   int64_t,
   uint64_t,
   float,
-  double,
+  double
 } from './types'
 
 import {
@@ -21,5 +21,5 @@ import {
   MavType,
   MavAutopilot,
   MavComponent,
-  MavModeFlag,
+  MavModeFlag
 } from './minimal'

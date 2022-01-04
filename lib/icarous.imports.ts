@@ -1,9 +1,9 @@
 import {
   int8_t,
-  float,
+  float
 } from './types'
 
 import {
   MavLinkPacketField,
-  MavLinkData,
+  MavLinkData
 } from './mavlink'

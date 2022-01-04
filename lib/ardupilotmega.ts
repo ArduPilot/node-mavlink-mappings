@@ -7,7 +7,7 @@ import {
   int32_t,
   uint32_t,
   uint64_t,
-  float,
+  float
 } from './types'
 
 import {
@@ -19,7 +19,7 @@ import {
   MavMountMode,
   MavDistanceSensor,
   MavFrame,
-  MagCalStatus,
+  MagCalStatus
 } from './common'
 
 /**

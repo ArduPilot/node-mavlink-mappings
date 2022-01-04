@@ -4,12 +4,12 @@ import {
   uint16_t,
   uint32_t,
   uint64_t,
-  float,
+  float
 } from './types'
 
 import {
   MavLinkPacketField,
-  MavLinkData,
+  MavLinkData
 } from './mavlink'
 
 import {
@@ -19,7 +19,7 @@ import {
 } from './common'
 
 import {
-  MavComponent,
+  MavComponent
 } from './minimal'
 
 /**
