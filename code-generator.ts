@@ -306,6 +306,7 @@ function generate(name: string, obj: any, output: Writter) {
           fieldType: extractArrayType(field.$.type),
           fieldSize: getTypeSize(field.$.type),
           itemType: extractArrayItemType(field.$.type),
+          unit: field.$.units ?? '',
         }
         if (entry.type === 'char[]') {
           entry.type = 'string'
@@ -404,9 +405,9 @@ function generate(name: string, obj: any, output: Writter) {
       .filter(field => !field.extension)
       .forEach(field => {
         if (field.arrayLength) {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', ${field.arrayLength}),`)
+          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', '${field.unit}', ${field.arrayLength}),`)
         } else {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}'),`)
+          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', '${field.unit}'),`)
         }
         offset += field.size
       })
@@ -416,9 +417,9 @@ function generate(name: string, obj: any, output: Writter) {
       .filter(field => field.extension)
       .forEach(field => {
         if (field.arrayLength) {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', ${field.arrayLength}),`)
+          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', '${field.unit}', ${field.arrayLength}),`)
         } else {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}'),`)
+          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', '${field.unit}'),`)
         }
         offset += field.size
       })
@@ -453,7 +454,13 @@ async function main() {
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
     const imports = fs.readFileSync(`lib/${part}.imports.ts`)
-    const xml = fs.readFileSync(`${part}.xml`)
+    let xml;
+    try {
+      xml = fs.readFileSync(`${part}.xml`)
+    } catch (e) {
+      xml = fs.readFileSync(`xml/${part}.xml`)
+    }
+
     const data = await parser.parseStringPromise(xml.toString(), { explicitChildren: true, preserveChildrenOrder: true })
     const output = new Writter()
     output.write(imports.toString())
