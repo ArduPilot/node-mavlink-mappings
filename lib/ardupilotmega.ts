@@ -719,7 +719,7 @@ export class SensorOffsets extends MavLinkData {
   magOfsZ: int16_t
   /**
    * Magnetic declination.
-   * Unit: rad
+   * Units: rad
    */
   magDeclination: float
   /**
@@ -818,12 +818,12 @@ export class MemInfo extends MavLinkData {
   brkval: uint16_t
   /**
    * Free memory.
-   * Unit: bytes
+   * Units: bytes
    */
   freemem: uint16_t
   /**
    * Free memory (32 bit).
-   * Unit: bytes
+   * Units: bytes
    */
   freemem32: uint32_t
 }
@@ -930,7 +930,7 @@ export class DigicamConfigure extends MavLinkData {
   commandId: uint8_t
   /**
    * Main engine cut-off time before camera trigger (0 means no cut-off).
-   * Unit: ds
+   * Units: ds
    */
   engineCutOff: uint8_t
   /**
@@ -1123,17 +1123,17 @@ export class MountStatus extends MavLinkData {
   targetComponent: uint8_t
   /**
    * Pitch.
-   * Unit: cdeg
+   * Units: cdeg
    */
   pointingA: int32_t
   /**
    * Roll.
-   * Unit: cdeg
+   * Units: cdeg
    */
   pointingB: int32_t
   /**
    * Yaw.
-   * Unit: cdeg
+   * Units: cdeg
    */
   pointingC: int32_t
 }
@@ -1175,12 +1175,12 @@ export class FencePoint extends MavLinkData {
   count: uint8_t
   /**
    * Latitude of point.
-   * Unit: deg
+   * Units: deg
    */
   lat: float
   /**
    * Longitude of point.
-   * Unit: deg
+   * Units: deg
    */
   lng: float
 }
@@ -1235,17 +1235,17 @@ export class Ahrs extends MavLinkData {
 
   /**
    * X gyro drift estimate.
-   * Unit: rad/s
+   * Units: rad/s
    */
   omegaIx: float
   /**
    * Y gyro drift estimate.
-   * Unit: rad/s
+   * Units: rad/s
    */
   omegaIy: float
   /**
    * Z gyro drift estimate.
-   * Unit: rad/s
+   * Units: rad/s
    */
   omegaIz: float
   /**
@@ -1291,57 +1291,57 @@ export class SimState extends MavLinkData {
 
   /**
    * Roll angle.
-   * Unit: rad
+   * Units: rad
    */
   roll: float
   /**
    * Pitch angle.
-   * Unit: rad
+   * Units: rad
    */
   pitch: float
   /**
    * Yaw angle.
-   * Unit: rad
+   * Units: rad
    */
   yaw: float
   /**
    * X acceleration.
-   * Unit: m/s/s
+   * Units: m/s/s
    */
   xacc: float
   /**
    * Y acceleration.
-   * Unit: m/s/s
+   * Units: m/s/s
    */
   yacc: float
   /**
    * Z acceleration.
-   * Unit: m/s/s
+   * Units: m/s/s
    */
   zacc: float
   /**
    * Angular speed around X axis.
-   * Unit: rad/s
+   * Units: rad/s
    */
   xgyro: float
   /**
    * Angular speed around Y axis.
-   * Unit: rad/s
+   * Units: rad/s
    */
   ygyro: float
   /**
    * Angular speed around Z axis.
-   * Unit: rad/s
+   * Units: rad/s
    */
   zgyro: float
   /**
    * Latitude.
-   * Unit: degE7
+   * Units: degE7
    */
   lat: int32_t
   /**
    * Longitude.
-   * Unit: degE7
+   * Units: degE7
    */
   lng: int32_t
 }
@@ -1362,7 +1362,7 @@ export class HwStatus extends MavLinkData {
 
   /**
    * Board voltage.
-   * Unit: mV
+   * Units: mV
    */
   Vcc: uint16_t
   /**
@@ -1400,7 +1400,7 @@ export class Radio extends MavLinkData {
   remrssi: uint8_t
   /**
    * How full the tx buffer is.
-   * Unit: %
+   * Units: %
    */
   txbuf: uint8_t
   /**
@@ -1448,22 +1448,22 @@ export class LimitsStatus extends MavLinkData {
   limitsState: LimitsState
   /**
    * Time (since boot) of last breach.
-   * Unit: ms
+   * Units: ms
    */
   lastTrigger: uint32_t
   /**
    * Time (since boot) of last recovery action.
-   * Unit: ms
+   * Units: ms
    */
   lastAction: uint32_t
   /**
    * Time (since boot) of last successful recovery.
-   * Unit: ms
+   * Units: ms
    */
   lastRecovery: uint32_t
   /**
    * Time (since boot) of last all-clear.
-   * Unit: ms
+   * Units: ms
    */
   lastClear: uint32_t
   /**
@@ -1501,17 +1501,17 @@ export class Wind extends MavLinkData {
 
   /**
    * Wind direction (that wind is coming from).
-   * Unit: deg
+   * Units: deg
    */
   direction: float
   /**
    * Wind speed in ground plane.
-   * Unit: m/s
+   * Units: m/s
    */
   speed: float
   /**
    * Vertical wind speed.
-   * Unit: m/s
+   * Units: m/s
    */
   speedZ: float
 }
@@ -1537,7 +1537,7 @@ export class Data16 extends MavLinkData {
   type: uint8_t
   /**
    * Data length.
-   * Unit: bytes
+   * Units: bytes
    */
   len: uint8_t
   /**
@@ -1567,7 +1567,7 @@ export class Data32 extends MavLinkData {
   type: uint8_t
   /**
    * Data length.
-   * Unit: bytes
+   * Units: bytes
    */
   len: uint8_t
   /**
@@ -1597,7 +1597,7 @@ export class Data64 extends MavLinkData {
   type: uint8_t
   /**
    * Data length.
-   * Unit: bytes
+   * Units: bytes
    */
   len: uint8_t
   /**
@@ -1627,7 +1627,7 @@ export class Data96 extends MavLinkData {
   type: uint8_t
   /**
    * Data length.
-   * Unit: bytes
+   * Units: bytes
    */
   len: uint8_t
   /**
@@ -1652,12 +1652,12 @@ export class RangeFinder extends MavLinkData {
 
   /**
    * Distance.
-   * Unit: m
+   * Units: m
    */
   distance: float
   /**
    * Raw voltage if available, zero otherwise.
-   * Unit: V
+   * Units: V
    */
   voltage: float
 }
@@ -1688,22 +1688,22 @@ export class AirspeedAutocal extends MavLinkData {
 
   /**
    * GPS velocity north.
-   * Unit: m/s
+   * Units: m/s
    */
   vx: float
   /**
    * GPS velocity east.
-   * Unit: m/s
+   * Units: m/s
    */
   vy: float
   /**
    * GPS velocity down.
-   * Unit: m/s
+   * Units: m/s
    */
   vz: float
   /**
    * Differential pressure.
-   * Unit: Pa
+   * Units: Pa
    */
   diffPressure: float
   /**
@@ -1781,27 +1781,27 @@ export class RallyPoint extends MavLinkData {
   count: uint8_t
   /**
    * Latitude of point.
-   * Unit: degE7
+   * Units: degE7
    */
   lat: int32_t
   /**
    * Longitude of point.
-   * Unit: degE7
+   * Units: degE7
    */
   lng: int32_t
   /**
    * Transit / loiter altitude relative to home.
-   * Unit: m
+   * Units: m
    */
   alt: int16_t
   /**
    * Break altitude relative to home.
-   * Unit: m
+   * Units: m
    */
   breakAlt: int16_t
   /**
    * Heading to aim for when landing.
-   * Unit: cdeg
+   * Units: cdeg
    */
   landDir: uint16_t
   /**
@@ -1860,17 +1860,17 @@ export class CompassMotStatus extends MavLinkData {
 
   /**
    * Throttle.
-   * Unit: d%
+   * Units: d%
    */
   throttle: uint16_t
   /**
    * Current.
-   * Unit: A
+   * Units: A
    */
   current: float
   /**
    * Interference.
-   * Unit: %
+   * Units: %
    */
   interference: uint16_t
   /**
@@ -1907,32 +1907,32 @@ export class Ahrs2 extends MavLinkData {
 
   /**
    * Roll angle.
-   * Unit: rad
+   * Units: rad
    */
   roll: float
   /**
    * Pitch angle.
-   * Unit: rad
+   * Units: rad
    */
   pitch: float
   /**
    * Yaw angle.
-   * Unit: rad
+   * Units: rad
    */
   yaw: float
   /**
    * Altitude (MSL).
-   * Unit: m
+   * Units: m
    */
   altitude: float
   /**
    * Latitude.
-   * Unit: degE7
+   * Units: degE7
    */
   lat: int32_t
   /**
    * Longitude.
-   * Unit: degE7
+   * Units: degE7
    */
   lng: int32_t
 }
@@ -1960,7 +1960,7 @@ export class CameraStatus extends MavLinkData {
 
   /**
    * Image timestamp (since UNIX epoch, according to camera clock).
-   * Unit: us
+   * Units: us
    */
   timeUsec: uint64_t
   /**
@@ -2025,7 +2025,7 @@ export class CameraFeedback extends MavLinkData {
 
   /**
    * Image timestamp (since UNIX epoch), as passed in by CAMERA_STATUS message (or autopilot if no CCB).
-   * Unit: us
+   * Units: us
    */
   timeUsec: uint64_t
   /**
@@ -2042,42 +2042,42 @@ export class CameraFeedback extends MavLinkData {
   imgIdx: uint16_t
   /**
    * Latitude.
-   * Unit: degE7
+   * Units: degE7
    */
   lat: int32_t
   /**
    * Longitude.
-   * Unit: degE7
+   * Units: degE7
    */
   lng: int32_t
   /**
    * Altitude (MSL).
-   * Unit: m
+   * Units: m
    */
   altMsl: float
   /**
    * Altitude (Relative to HOME location).
-   * Unit: m
+   * Units: m
    */
   altRel: float
   /**
    * Camera Roll angle (earth frame, +-180).
-   * Unit: deg
+   * Units: deg
    */
   roll: float
   /**
    * Camera Pitch angle (earth frame, +-180).
-   * Unit: deg
+   * Units: deg
    */
   pitch: float
   /**
    * Camera Yaw (earth frame, 0-360, true).
-   * Unit: deg
+   * Units: deg
    */
   yaw: float
   /**
    * Focal Length.
-   * Unit: mm
+   * Units: mm
    */
   focLen: float
   /**
@@ -2108,12 +2108,12 @@ export class Battery2 extends MavLinkData {
 
   /**
    * Voltage.
-   * Unit: mV
+   * Units: mV
    */
   voltage: uint16_t
   /**
    * Battery current, -1: autopilot does not measure the current.
-   * Unit: cA
+   * Units: cA
    */
   currentBattery: int16_t
 }
@@ -2142,32 +2142,32 @@ export class Ahrs3 extends MavLinkData {
 
   /**
    * Roll angle.
-   * Unit: rad
+   * Units: rad
    */
   roll: float
   /**
    * Pitch angle.
-   * Unit: rad
+   * Units: rad
    */
   pitch: float
   /**
    * Yaw angle.
-   * Unit: rad
+   * Units: rad
    */
   yaw: float
   /**
    * Altitude (MSL).
-   * Unit: m
+   * Units: m
    */
   altitude: float
   /**
    * Latitude.
-   * Unit: degE7
+   * Units: degE7
    */
   lat: int32_t
   /**
    * Longitude.
-   * Unit: degE7
+   * Units: degE7
    */
   lng: int32_t
   /**
@@ -2363,7 +2363,7 @@ export class MagCalProgress extends MavLinkData {
   attempt: uint8_t
   /**
    * Completion percentage.
-   * Unit: %
+   * Units: %
    */
   completionPct: uint8_t
   /**
@@ -2516,47 +2516,47 @@ export class Deepstall extends MavLinkData {
 
   /**
    * Landing latitude.
-   * Unit: degE7
+   * Units: degE7
    */
   landingLat: int32_t
   /**
    * Landing longitude.
-   * Unit: degE7
+   * Units: degE7
    */
   landingLon: int32_t
   /**
    * Final heading start point, latitude.
-   * Unit: degE7
+   * Units: degE7
    */
   pathLat: int32_t
   /**
    * Final heading start point, longitude.
-   * Unit: degE7
+   * Units: degE7
    */
   pathLon: int32_t
   /**
    * Arc entry point, latitude.
-   * Unit: degE7
+   * Units: degE7
    */
   arcEntryLat: int32_t
   /**
    * Arc entry point, longitude.
-   * Unit: degE7
+   * Units: degE7
    */
   arcEntryLon: int32_t
   /**
    * Altitude.
-   * Unit: m
+   * Units: m
    */
   altitude: float
   /**
    * Distance the aircraft expects to travel during the deepstall.
-   * Unit: m
+   * Units: m
    */
   expectedTravelDistance: float
   /**
    * Deepstall cross track error (only valid when in DEEPSTALL_STAGE_LAND).
-   * Unit: m
+   * Units: m
    */
   crossTrackError: float
   /**
@@ -2599,52 +2599,52 @@ export class GimbalReport extends MavLinkData {
   targetComponent: uint8_t
   /**
    * Time since last update.
-   * Unit: s
+   * Units: s
    */
   deltaTime: float
   /**
    * Delta angle X.
-   * Unit: rad
+   * Units: rad
    */
   deltaAngleX: float
   /**
    * Delta angle Y.
-   * Unit: rad
+   * Units: rad
    */
   deltaAngleY: float
   /**
    * Delta angle X.
-   * Unit: rad
+   * Units: rad
    */
   deltaAngleZ: float
   /**
    * Delta velocity X.
-   * Unit: m/s
+   * Units: m/s
    */
   deltaVelocityX: float
   /**
    * Delta velocity Y.
-   * Unit: m/s
+   * Units: m/s
    */
   deltaVelocityY: float
   /**
    * Delta velocity Z.
-   * Unit: m/s
+   * Units: m/s
    */
   deltaVelocityZ: float
   /**
    * Joint ROLL.
-   * Unit: rad
+   * Units: rad
    */
   jointRoll: float
   /**
    * Joint EL.
-   * Unit: rad
+   * Units: rad
    */
   jointEl: float
   /**
    * Joint AZ.
-   * Unit: rad
+   * Units: rad
    */
   jointAz: float
 }
@@ -2676,17 +2676,17 @@ export class GimbalControl extends MavLinkData {
   targetComponent: uint8_t
   /**
    * Demanded angular rate X.
-   * Unit: rad/s
+   * Units: rad/s
    */
   demandedRateX: float
   /**
    * Demanded angular rate Y.
-   * Unit: rad/s
+   * Units: rad/s
    */
   demandedRateY: float
   /**
    * Demanded angular rate Z.
-   * Unit: rad/s
+   * Units: rad/s
    */
   demandedRateZ: float
 }
@@ -3131,12 +3131,12 @@ export class AdapTuning extends MavLinkData {
   axis: PidTuningAxis
   /**
    * Desired rate.
-   * Unit: deg/s
+   * Units: deg/s
    */
   desired: float
   /**
    * Achieved rate.
-   * Unit: deg/s
+   * Units: deg/s
    */
   achieved: float
   /**
@@ -3200,29 +3200,29 @@ export class VisionPositionDelta extends MavLinkData {
 
   /**
    * Timestamp (synced to UNIX time or since system boot).
-   * Unit: us
+   * Units: us
    */
   timeUsec: uint64_t
   /**
    * Time since the last reported camera frame.
-   * Unit: us
+   * Units: us
    */
   timeDeltaUsec: uint64_t
   /**
    * Defines a rotation vector [roll, pitch, yaw] to the current MAV_FRAME_BODY_FRD from the previous
    * MAV_FRAME_BODY_FRD.
-   * Unit: rad
+   * Units: rad
    */
   angleDelta: float[]
   /**
    * Change in position to the current MAV_FRAME_BODY_FRD from the previous FRAME_BODY_FRD rotated to the
    * current MAV_FRAME_BODY_FRD.
-   * Unit: m
+   * Units: m
    */
   positionDelta: float[]
   /**
    * Normalised confidence value from 0 to 100.
-   * Unit: %
+   * Units: %
    */
   confidence: float
 }
@@ -3244,17 +3244,17 @@ export class AoaSsa extends MavLinkData {
 
   /**
    * Timestamp (since boot or Unix epoch).
-   * Unit: us
+   * Units: us
    */
   timeUsec: uint64_t
   /**
    * Angle of Attack.
-   * Unit: deg
+   * Units: deg
    */
   AOA: float
   /**
    * Side Slip Angle.
-   * Unit: deg
+   * Units: deg
    */
   SSA: float
 }
@@ -3279,27 +3279,27 @@ export class EscTelemetry1To4 extends MavLinkData {
 
   /**
    * Temperature.
-   * Unit: degC
+   * Units: degC
    */
   temperature: uint8_t[]
   /**
    * Voltage.
-   * Unit: cV
+   * Units: cV
    */
   voltage: uint16_t[]
   /**
    * Current.
-   * Unit: cA
+   * Units: cA
    */
   current: uint16_t[]
   /**
    * Total current.
-   * Unit: mAh
+   * Units: mAh
    */
   totalcurrent: uint16_t[]
   /**
    * RPM (eRPM).
-   * Unit: rpm
+   * Units: rpm
    */
   rpm: uint16_t[]
   /**
@@ -3328,27 +3328,27 @@ export class EscTelemetry5To8 extends MavLinkData {
 
   /**
    * Temperature.
-   * Unit: degC
+   * Units: degC
    */
   temperature: uint8_t[]
   /**
    * Voltage.
-   * Unit: cV
+   * Units: cV
    */
   voltage: uint16_t[]
   /**
    * Current.
-   * Unit: cA
+   * Units: cA
    */
   current: uint16_t[]
   /**
    * Total current.
-   * Unit: mAh
+   * Units: mAh
    */
   totalcurrent: uint16_t[]
   /**
    * RPM (eRPM).
-   * Unit: rpm
+   * Units: rpm
    */
   rpm: uint16_t[]
   /**
@@ -3377,27 +3377,27 @@ export class EscTelemetry9To12 extends MavLinkData {
 
   /**
    * Temperature.
-   * Unit: degC
+   * Units: degC
    */
   temperature: uint8_t[]
   /**
    * Voltage.
-   * Unit: cV
+   * Units: cV
    */
   voltage: uint16_t[]
   /**
    * Current.
-   * Unit: cA
+   * Units: cA
    */
   current: uint16_t[]
   /**
    * Total current.
-   * Unit: mAh
+   * Units: mAh
    */
   totalcurrent: uint16_t[]
   /**
    * RPM (eRPM).
-   * Unit: rpm
+   * Units: rpm
    */
   rpm: uint16_t[]
   /**
@@ -3609,7 +3609,7 @@ export class ObstacleDistance3d extends MavLinkData {
 
   /**
    * Timestamp (time since system boot).
-   * Unit: ms
+   * Units: ms
    */
   timeBootMs: uint32_t
   /**
@@ -3627,27 +3627,27 @@ export class ObstacleDistance3d extends MavLinkData {
   obstacleId: uint16_t
   /**
    * X position of the obstacle.
-   * Unit: m
+   * Units: m
    */
   x: float
   /**
    * Y position of the obstacle.
-   * Unit: m
+   * Units: m
    */
   y: float
   /**
    * Z position of the obstacle.
-   * Unit: m
+   * Units: m
    */
   z: float
   /**
    * Minimum distance the sensor can measure.
-   * Unit: m
+   * Units: m
    */
   minDistance: float
   /**
    * Maximum distance the sensor can measure.
-   * Unit: m
+   * Units: m
    */
   maxDistance: float
 }
@@ -3677,7 +3677,7 @@ export class WaterDepth extends MavLinkData {
 
   /**
    * Timestamp (time since system boot)
-   * Unit: ms
+   * Units: ms
    */
   timeBootMs: uint32_t
   /**
@@ -3690,42 +3690,42 @@ export class WaterDepth extends MavLinkData {
   healthy: uint8_t
   /**
    * Latitude
-   * Unit: degE7
+   * Units: degE7
    */
   lat: int32_t
   /**
    * Longitude
-   * Unit: degE7
+   * Units: degE7
    */
   lng: int32_t
   /**
    * Altitude (MSL) of vehicle
-   * Unit: m
+   * Units: m
    */
   alt: float
   /**
    * Roll angle
-   * Unit: rad
+   * Units: rad
    */
   roll: float
   /**
    * Pitch angle
-   * Unit: rad
+   * Units: rad
    */
   pitch: float
   /**
    * Yaw angle
-   * Unit: rad
+   * Units: rad
    */
   yaw: float
   /**
    * Distance (uncorrected)
-   * Unit: m
+   * Units: m
    */
   distance: float
   /**
    * Water temperature
-   * Unit: degC
+   * Units: degC
    */
   temperature: float
 }
@@ -3754,22 +3754,22 @@ export class McuStatus extends MavLinkData {
   id: uint8_t
   /**
    * MCU Internal temperature
-   * Unit: cdegC
+   * Units: cdegC
    */
   MCUTemperature: int16_t
   /**
    * MCU voltage
-   * Unit: mV
+   * Units: mV
    */
   MCUVoltage: uint16_t
   /**
    * MCU voltage minimum
-   * Unit: mV
+   * Units: mV
    */
   MCUVoltageMin: uint16_t
   /**
    * MCU voltage maximum
-   * Unit: mV
+   * Units: mV
    */
   MCUVoltageMax: uint16_t
 }
