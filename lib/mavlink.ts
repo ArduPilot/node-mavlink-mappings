@@ -8,6 +8,7 @@ export class MavLinkPacketField {
   readonly offset: number
   readonly extension: boolean
   readonly size: number
+  readonly unit: string
 
   /**
    * @param name name of the field
@@ -15,15 +16,17 @@ export class MavLinkPacketField {
    * @param extension true if it is an extension field, false otherwise
    * @param size size of either the field or the size of an element in the array if it is an array field
    * @param type type of the field (ends with [] if it is an array field)
+   * @param unit unit of the field
    * @param length for array fields this is the length of the array
    */
-  constructor(name, offset, extension, size, type, length = 0) {
+  constructor(name: string, offset: number, extension: boolean, size: number, type: string, unit: string, length = 0) {
     this.name = name
     this.offset = offset
     this.type = type
     this.length = length
     this.extension = extension
     this.size = size
+    this.unit = unit
   }
 }
 

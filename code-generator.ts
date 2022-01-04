@@ -306,6 +306,7 @@ function generate(name: string, obj: any, output: Writter) {
           fieldType: extractArrayType(field.$.type),
           fieldSize: getTypeSize(field.$.type),
           itemType: extractArrayItemType(field.$.type),
+          units: field.$.units || '',
         }
         if (entry.type === 'char[]') {
           entry.type = 'string'
@@ -404,9 +405,9 @@ function generate(name: string, obj: any, output: Writter) {
       .filter(field => !field.extension)
       .forEach(field => {
         if (field.arrayLength) {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', ${field.arrayLength}),`)
+          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', '${field.units}', ${field.arrayLength}),`)
         } else {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}'),`)
+          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', '${field.units}'),`)
         }
         offset += field.size
       })
@@ -416,9 +417,9 @@ function generate(name: string, obj: any, output: Writter) {
       .filter(field => field.extension)
       .forEach(field => {
         if (field.arrayLength) {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', ${field.arrayLength}),`)
+          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', '${field.units}', ${field.arrayLength}),`)
         } else {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}'),`)
+          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', '${field.units}'),`)
         }
         offset += field.size
       })
