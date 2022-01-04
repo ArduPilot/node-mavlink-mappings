@@ -1,6 +1,4 @@
 node_modules
-xml/*.xml
-*.xml
 dist
 package-lock.json
 .idea

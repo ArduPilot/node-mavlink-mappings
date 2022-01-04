@@ -136,6 +136,19 @@ export enum MavSysStatusSensor {
   'PREARM_CHECK'                                   = 268435456,
   'OBSTACLE_AVOIDANCE'                             = 536870912,
   'SENSOR_PROPULSION'                              = 1073741824,
+  /**
+   * 0x80000000 Extended bit-field are used for further sensor status bits (needs to be set in
+   * onboard_control_sensors_present only)
+   */
+  'EXTENSION_USED'                                 = 2147483648,
+}
+
+/**
+ * These encode the sensors whose status is sent as part of the SYS_STATUS message in the extended
+ * fields.
+ */
+export enum MavSysStatusSensorExtended {
+  'SYSTEM'                                         = 1,
 }
 
 /**
@@ -363,8 +376,8 @@ export enum GimbalManagerCapFlags {
 export enum GimbalDeviceFlags {
   'RETRACT'                                        = 1,
   /**
-   * Set to neutral position (horizontal, forward looking, with stabiliziation), takes presedence over
-   * all other flags except RETRACT.
+   * Set to neutral/default position, taking precedence over all other flags except RETRACT. Neutral is
+   * commonly forward-facing and horizontal (pitch=yaw=0) but may be any orientation.
    */
   'NEUTRAL'                                        = 2,
   /**
@@ -2628,23 +2641,26 @@ export enum HighresImuUpdatedFlags {
 export class SysStatus extends MavLinkData {
   static MSG_ID = 1
   static MSG_NAME = 'SYS_STATUS'
-  static PAYLOAD_LENGTH = 31
+  static PAYLOAD_LENGTH = 43
   static MAGIC_NUMBER = 124
 
   static FIELDS = [
-    new MavLinkPacketField('onboardControlSensorsPresent', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('onboardControlSensorsEnabled', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('onboardControlSensorsHealth', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('load', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('voltageBattery', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('currentBattery', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('dropRateComm', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('errorsComm', 20, false, 2, 'uint16_t'),
-    new MavLinkPacketField('errorsCount1', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('errorsCount2', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('errorsCount3', 26, false, 2, 'uint16_t'),
-    new MavLinkPacketField('errorsCount4', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('batteryRemaining', 30, false, 1, 'int8_t'),
+    new MavLinkPacketField('onboardControlSensorsPresent', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('onboardControlSensorsEnabled', 4, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('onboardControlSensorsHealth', 8, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('load', 12, false, 2, 'uint16_t', 'd%'),
+    new MavLinkPacketField('voltageBattery', 14, false, 2, 'uint16_t', 'mV'),
+    new MavLinkPacketField('currentBattery', 16, false, 2, 'int16_t', 'cA'),
+    new MavLinkPacketField('dropRateComm', 18, false, 2, 'uint16_t', 'c%'),
+    new MavLinkPacketField('errorsComm', 20, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('errorsCount1', 22, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('errorsCount2', 24, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('errorsCount3', 26, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('errorsCount4', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('batteryRemaining', 30, false, 1, 'int8_t', '%'),
+    new MavLinkPacketField('onboardControlSensorsPresentExtended', 31, true, 4, 'uint32_t', ''),
+    new MavLinkPacketField('onboardControlSensorsEnabledExtended', 35, true, 4, 'uint32_t', ''),
+    new MavLinkPacketField('onboardControlSensorsHealthExtended', 39, true, 4, 'uint32_t', ''),
   ]
 
   /**
@@ -2704,6 +2720,21 @@ export class SysStatus extends MavLinkData {
    * Autopilot-specific errors
    */
   errorsCount4: uint16_t
+  /**
+   * Bitmap showing which onboard controllers and sensors are present. Value of 0: not present. Value of
+   * 1: present.
+   */
+  onboardControlSensorsPresentExtended: MavSysStatusSensorExtended
+  /**
+   * Bitmap showing which onboard controllers and sensors are enabled: Value of 0: not enabled. Value of
+   * 1: enabled.
+   */
+  onboardControlSensorsEnabledExtended: MavSysStatusSensorExtended
+  /**
+   * Bitmap showing which onboard controllers and sensors have an error (or are operational). Value of 0:
+   * error. Value of 1: healthy.
+   */
+  onboardControlSensorsHealthExtended: MavSysStatusSensorExtended
 }
 
 /**
@@ -2717,8 +2748,8 @@ export class SystemTime extends MavLinkData {
   static MAGIC_NUMBER = 137
 
   static FIELDS = [
-    new MavLinkPacketField('timeUnixUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('timeBootMs', 8, false, 4, 'uint32_t'),
+    new MavLinkPacketField('timeUnixUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('timeBootMs', 8, false, 4, 'uint32_t', 'ms'),
   ]
 
   /**
@@ -2745,10 +2776,10 @@ export class Ping extends MavLinkData {
   static MAGIC_NUMBER = 237
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('seq', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('targetSystem', 12, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 13, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('seq', 8, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('targetSystem', 12, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 13, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -2782,10 +2813,10 @@ export class ChangeOperatorControl extends MavLinkData {
   static MAGIC_NUMBER = 217
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('controlRequest', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('version', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('passkey', 3, false, 1, 'char[]', 25),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('controlRequest', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('version', 2, false, 1, 'uint8_t', 'rad'),
+    new MavLinkPacketField('passkey', 3, false, 1, 'char[]', '', 25),
   ]
 
   /**
@@ -2819,9 +2850,9 @@ export class ChangeOperatorControlAck extends MavLinkData {
   static MAGIC_NUMBER = 104
 
   static FIELDS = [
-    new MavLinkPacketField('gcsSystemId', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('controlRequest', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('ack', 2, false, 1, 'uint8_t'),
+    new MavLinkPacketField('gcsSystemId', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('controlRequest', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('ack', 2, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -2850,7 +2881,7 @@ export class AuthKey extends MavLinkData {
   static MAGIC_NUMBER = 119
 
   static FIELDS = [
-    new MavLinkPacketField('key', 0, false, 1, 'char[]', 32),
+    new MavLinkPacketField('key', 0, false, 1, 'char[]', '', 32),
   ]
 
   /**
@@ -2869,17 +2900,17 @@ export class LinkNodeStatus extends MavLinkData {
   static MAGIC_NUMBER = 117
 
   static FIELDS = [
-    new MavLinkPacketField('timestamp', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('txRate', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('rxRate', 12, false, 4, 'uint32_t'),
-    new MavLinkPacketField('messagesSent', 16, false, 4, 'uint32_t'),
-    new MavLinkPacketField('messagesReceived', 20, false, 4, 'uint32_t'),
-    new MavLinkPacketField('messagesLost', 24, false, 4, 'uint32_t'),
-    new MavLinkPacketField('rxParseErr', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('txOverflows', 30, false, 2, 'uint16_t'),
-    new MavLinkPacketField('rxOverflows', 32, false, 2, 'uint16_t'),
-    new MavLinkPacketField('txBuf', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rxBuf', 35, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timestamp', 0, false, 8, 'uint64_t', 'ms'),
+    new MavLinkPacketField('txRate', 8, false, 4, 'uint32_t', 'bytes/s'),
+    new MavLinkPacketField('rxRate', 12, false, 4, 'uint32_t', 'bytes/s'),
+    new MavLinkPacketField('messagesSent', 16, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('messagesReceived', 20, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('messagesLost', 24, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('rxParseErr', 28, false, 2, 'uint16_t', 'bytes'),
+    new MavLinkPacketField('txOverflows', 30, false, 2, 'uint16_t', 'bytes'),
+    new MavLinkPacketField('rxOverflows', 32, false, 2, 'uint16_t', 'bytes'),
+    new MavLinkPacketField('txBuf', 34, false, 1, 'uint8_t', '%'),
+    new MavLinkPacketField('rxBuf', 35, false, 1, 'uint8_t', '%'),
   ]
 
   /**
@@ -2941,9 +2972,9 @@ export class SetMode extends MavLinkData {
   static MAGIC_NUMBER = 89
 
   static FIELDS = [
-    new MavLinkPacketField('customMode', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('baseMode', 5, false, 1, 'uint8_t'),
+    new MavLinkPacketField('customMode', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('baseMode', 5, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -2975,10 +3006,10 @@ export class ParamRequestRead extends MavLinkData {
   static MAGIC_NUMBER = 214
 
   static FIELDS = [
-    new MavLinkPacketField('paramIndex', 0, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('paramId', 4, false, 1, 'char[]', 16),
+    new MavLinkPacketField('paramIndex', 0, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('paramId', 4, false, 1, 'char[]', '', 16),
   ]
 
   /**
@@ -3012,8 +3043,8 @@ export class ParamRequestList extends MavLinkData {
   static MAGIC_NUMBER = 159
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -3039,11 +3070,11 @@ export class ParamValue extends MavLinkData {
   static MAGIC_NUMBER = 220
 
   static FIELDS = [
-    new MavLinkPacketField('paramValue', 0, false, 4, 'float'),
-    new MavLinkPacketField('paramCount', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('paramIndex', 6, false, 2, 'uint16_t'),
-    new MavLinkPacketField('paramId', 8, false, 1, 'char[]', 16),
-    new MavLinkPacketField('paramType', 24, false, 1, 'uint8_t'),
+    new MavLinkPacketField('paramValue', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('paramCount', 4, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('paramIndex', 6, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('paramId', 8, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('paramType', 24, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -3088,11 +3119,11 @@ export class ParamSet extends MavLinkData {
   static MAGIC_NUMBER = 168
 
   static FIELDS = [
-    new MavLinkPacketField('paramValue', 0, false, 4, 'float'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('paramId', 6, false, 1, 'char[]', 16),
-    new MavLinkPacketField('paramType', 22, false, 1, 'uint8_t'),
+    new MavLinkPacketField('paramValue', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('paramId', 6, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('paramType', 22, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -3131,22 +3162,22 @@ export class GpsRawInt extends MavLinkData {
   static MAGIC_NUMBER = 24
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lat', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('eph', 20, false, 2, 'uint16_t'),
-    new MavLinkPacketField('epv', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('vel', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('cog', 26, false, 2, 'uint16_t'),
-    new MavLinkPacketField('fixType', 28, false, 1, 'uint8_t'),
-    new MavLinkPacketField('satellitesVisible', 29, false, 1, 'uint8_t'),
-    new MavLinkPacketField('altEllipsoid', 30, true, 4, 'int32_t'),
-    new MavLinkPacketField('hAcc', 34, true, 4, 'uint32_t'),
-    new MavLinkPacketField('vAcc', 38, true, 4, 'uint32_t'),
-    new MavLinkPacketField('velAcc', 42, true, 4, 'uint32_t'),
-    new MavLinkPacketField('hdgAcc', 46, true, 4, 'uint32_t'),
-    new MavLinkPacketField('yaw', 50, true, 2, 'uint16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('lat', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 12, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 16, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('eph', 20, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('epv', 22, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('vel', 24, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('cog', 26, false, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('fixType', 28, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('satellitesVisible', 29, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('altEllipsoid', 30, true, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('hAcc', 34, true, 4, 'uint32_t', 'mm'),
+    new MavLinkPacketField('vAcc', 38, true, 4, 'uint32_t', 'mm'),
+    new MavLinkPacketField('velAcc', 42, true, 4, 'uint32_t', 'mm'),
+    new MavLinkPacketField('hdgAcc', 46, true, 4, 'uint32_t', 'degE5'),
+    new MavLinkPacketField('yaw', 50, true, 2, 'uint16_t', 'cdeg'),
   ]
 
   /**
@@ -3231,12 +3262,12 @@ export class GpsStatus extends MavLinkData {
   static MAGIC_NUMBER = 23
 
   static FIELDS = [
-    new MavLinkPacketField('satellitesVisible', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('satellitePrn', 1, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('satelliteUsed', 21, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('satelliteElevation', 41, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('satelliteAzimuth', 61, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('satelliteSnr', 81, false, 1, 'uint8_t[]', 20),
+    new MavLinkPacketField('satellitesVisible', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('satellitePrn', 1, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('satelliteUsed', 21, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('satelliteElevation', 41, false, 1, 'uint8_t[]', 'deg', 20),
+    new MavLinkPacketField('satelliteAzimuth', 61, false, 1, 'uint8_t[]', 'deg', 20),
+    new MavLinkPacketField('satelliteSnr', 81, false, 1, 'uint8_t[]', 'dB', 20),
   ]
 
   /**
@@ -3276,17 +3307,17 @@ export class ScaledImu extends MavLinkData {
   static MAGIC_NUMBER = 170
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('xacc', 4, false, 2, 'int16_t'),
-    new MavLinkPacketField('yacc', 6, false, 2, 'int16_t'),
-    new MavLinkPacketField('zacc', 8, false, 2, 'int16_t'),
-    new MavLinkPacketField('xgyro', 10, false, 2, 'int16_t'),
-    new MavLinkPacketField('ygyro', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('zgyro', 14, false, 2, 'int16_t'),
-    new MavLinkPacketField('xmag', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('ymag', 18, false, 2, 'int16_t'),
-    new MavLinkPacketField('zmag', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('temperature', 22, true, 2, 'int16_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('xacc', 4, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('yacc', 6, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('zacc', 8, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('xgyro', 10, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('ygyro', 12, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('zgyro', 14, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('xmag', 16, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('ymag', 18, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('zmag', 20, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('temperature', 22, true, 2, 'int16_t', 'cdegC'),
   ]
 
   /**
@@ -3347,18 +3378,18 @@ export class RawImu extends MavLinkData {
   static MAGIC_NUMBER = 144
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('xacc', 8, false, 2, 'int16_t'),
-    new MavLinkPacketField('yacc', 10, false, 2, 'int16_t'),
-    new MavLinkPacketField('zacc', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('xgyro', 14, false, 2, 'int16_t'),
-    new MavLinkPacketField('ygyro', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('zgyro', 18, false, 2, 'int16_t'),
-    new MavLinkPacketField('xmag', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('ymag', 22, false, 2, 'int16_t'),
-    new MavLinkPacketField('zmag', 24, false, 2, 'int16_t'),
-    new MavLinkPacketField('id', 26, true, 1, 'uint8_t'),
-    new MavLinkPacketField('temperature', 27, true, 2, 'int16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('xacc', 8, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('yacc', 10, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('zacc', 12, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('xgyro', 14, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('ygyro', 16, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('zgyro', 18, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('xmag', 20, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('ymag', 22, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('zmag', 24, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('id', 26, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('temperature', 27, true, 2, 'int16_t', 'cdegC'),
   ]
 
   /**
@@ -3424,11 +3455,11 @@ export class RawPressure extends MavLinkData {
   static MAGIC_NUMBER = 67
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('pressAbs', 8, false, 2, 'int16_t'),
-    new MavLinkPacketField('pressDiff1', 10, false, 2, 'int16_t'),
-    new MavLinkPacketField('pressDiff2', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('temperature', 14, false, 2, 'int16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('pressAbs', 8, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('pressDiff1', 10, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('pressDiff2', 12, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('temperature', 14, false, 2, 'int16_t', ''),
   ]
 
   /**
@@ -3465,11 +3496,11 @@ export class ScaledPressure extends MavLinkData {
   static MAGIC_NUMBER = 115
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('pressAbs', 4, false, 4, 'float'),
-    new MavLinkPacketField('pressDiff', 8, false, 4, 'float'),
-    new MavLinkPacketField('temperature', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('temperaturePressDiff', 14, true, 2, 'int16_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('pressAbs', 4, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('pressDiff', 8, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('temperature', 12, false, 2, 'int16_t', 'cdegC'),
+    new MavLinkPacketField('temperaturePressDiff', 14, true, 2, 'int16_t', 'cdegC'),
   ]
 
   /**
@@ -3504,13 +3535,13 @@ export class Attitude extends MavLinkData {
   static MAGIC_NUMBER = 39
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('roll', 4, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 8, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 12, false, 4, 'float'),
-    new MavLinkPacketField('rollspeed', 16, false, 4, 'float'),
-    new MavLinkPacketField('pitchspeed', 20, false, 4, 'float'),
-    new MavLinkPacketField('yawspeed', 24, false, 4, 'float'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('roll', 4, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitch', 8, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yaw', 12, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('rollspeed', 16, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('pitchspeed', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yawspeed', 24, false, 4, 'float', 'rad/s'),
   ]
 
   /**
@@ -3554,15 +3585,15 @@ export class AttitudeQuaternion extends MavLinkData {
   static MAGIC_NUMBER = 246
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('q1', 4, false, 4, 'float'),
-    new MavLinkPacketField('q2', 8, false, 4, 'float'),
-    new MavLinkPacketField('q3', 12, false, 4, 'float'),
-    new MavLinkPacketField('q4', 16, false, 4, 'float'),
-    new MavLinkPacketField('rollspeed', 20, false, 4, 'float'),
-    new MavLinkPacketField('pitchspeed', 24, false, 4, 'float'),
-    new MavLinkPacketField('yawspeed', 28, false, 4, 'float'),
-    new MavLinkPacketField('reprOffsetQ', 32, true, 4, 'float[]', 4),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('q1', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('q2', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('q3', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('q4', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('rollspeed', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('pitchspeed', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yawspeed', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('reprOffsetQ', 32, true, 4, 'float[]', '', 4),
   ]
 
   /**
@@ -3619,13 +3650,13 @@ export class LocalPositionNed extends MavLinkData {
   static MAGIC_NUMBER = 185
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('x', 4, false, 4, 'float'),
-    new MavLinkPacketField('y', 8, false, 4, 'float'),
-    new MavLinkPacketField('z', 12, false, 4, 'float'),
-    new MavLinkPacketField('vx', 16, false, 4, 'float'),
-    new MavLinkPacketField('vy', 20, false, 4, 'float'),
-    new MavLinkPacketField('vz', 24, false, 4, 'float'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('x', 4, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vx', 16, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 24, false, 4, 'float', 'm/s'),
   ]
 
   /**
@@ -3670,15 +3701,15 @@ export class GlobalPositionInt extends MavLinkData {
   static MAGIC_NUMBER = 104
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('lat', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('relativeAlt', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('vx', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('vy', 22, false, 2, 'int16_t'),
-    new MavLinkPacketField('vz', 24, false, 2, 'int16_t'),
-    new MavLinkPacketField('hdg', 26, false, 2, 'uint16_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('lat', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 12, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('relativeAlt', 16, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('vx', 20, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vy', 22, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vz', 24, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('hdg', 26, false, 2, 'uint16_t', 'cdeg'),
   ]
 
   /**
@@ -3730,17 +3761,17 @@ export class RcChannelsScaled extends MavLinkData {
   static MAGIC_NUMBER = 237
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('chan1Scaled', 4, false, 2, 'int16_t'),
-    new MavLinkPacketField('chan2Scaled', 6, false, 2, 'int16_t'),
-    new MavLinkPacketField('chan3Scaled', 8, false, 2, 'int16_t'),
-    new MavLinkPacketField('chan4Scaled', 10, false, 2, 'int16_t'),
-    new MavLinkPacketField('chan5Scaled', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('chan6Scaled', 14, false, 2, 'int16_t'),
-    new MavLinkPacketField('chan7Scaled', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('chan8Scaled', 18, false, 2, 'int16_t'),
-    new MavLinkPacketField('port', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rssi', 21, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('chan1Scaled', 4, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('chan2Scaled', 6, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('chan3Scaled', 8, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('chan4Scaled', 10, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('chan5Scaled', 12, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('chan6Scaled', 14, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('chan7Scaled', 16, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('chan8Scaled', 18, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('port', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rssi', 21, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -3803,17 +3834,17 @@ export class RcChannelsRaw extends MavLinkData {
   static MAGIC_NUMBER = 244
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('chan1Raw', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan2Raw', 6, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan3Raw', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan4Raw', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan5Raw', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan6Raw', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan7Raw', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan8Raw', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('port', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rssi', 21, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('chan1Raw', 4, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan2Raw', 6, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan3Raw', 8, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan4Raw', 10, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan5Raw', 12, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan6Raw', 14, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan7Raw', 16, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan8Raw', 18, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('port', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rssi', 21, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -3876,24 +3907,24 @@ export class ServoOutputRaw extends MavLinkData {
   static MAGIC_NUMBER = 222
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('servo1Raw', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('servo2Raw', 6, false, 2, 'uint16_t'),
-    new MavLinkPacketField('servo3Raw', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('servo4Raw', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('servo5Raw', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('servo6Raw', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('servo7Raw', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('servo8Raw', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('port', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('servo9Raw', 21, true, 2, 'uint16_t'),
-    new MavLinkPacketField('servo10Raw', 23, true, 2, 'uint16_t'),
-    new MavLinkPacketField('servo11Raw', 25, true, 2, 'uint16_t'),
-    new MavLinkPacketField('servo12Raw', 27, true, 2, 'uint16_t'),
-    new MavLinkPacketField('servo13Raw', 29, true, 2, 'uint16_t'),
-    new MavLinkPacketField('servo14Raw', 31, true, 2, 'uint16_t'),
-    new MavLinkPacketField('servo15Raw', 33, true, 2, 'uint16_t'),
-    new MavLinkPacketField('servo16Raw', 35, true, 2, 'uint16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 4, 'uint32_t', 'us'),
+    new MavLinkPacketField('servo1Raw', 4, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo2Raw', 6, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo3Raw', 8, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo4Raw', 10, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo5Raw', 12, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo6Raw', 14, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo7Raw', 16, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo8Raw', 18, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('port', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('servo9Raw', 21, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo10Raw', 23, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo11Raw', 25, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo12Raw', 27, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo13Raw', 29, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo14Raw', 31, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo15Raw', 33, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('servo16Raw', 35, true, 2, 'uint16_t', 'us'),
   ]
 
   /**
@@ -3984,11 +4015,11 @@ export class MissionRequestPartialList extends MavLinkData {
   static MAGIC_NUMBER = 212
 
   static FIELDS = [
-    new MavLinkPacketField('startIndex', 0, false, 2, 'int16_t'),
-    new MavLinkPacketField('endIndex', 2, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 6, true, 1, 'uint8_t'),
+    new MavLinkPacketField('startIndex', 0, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('endIndex', 2, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 6, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4025,11 +4056,11 @@ export class MissionWritePartialList extends MavLinkData {
   static MAGIC_NUMBER = 9
 
   static FIELDS = [
-    new MavLinkPacketField('startIndex', 0, false, 2, 'int16_t'),
-    new MavLinkPacketField('endIndex', 2, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 6, true, 1, 'uint8_t'),
+    new MavLinkPacketField('startIndex', 0, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('endIndex', 2, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 6, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4071,21 +4102,21 @@ export class MissionItem extends MavLinkData {
   static MAGIC_NUMBER = 254
 
   static FIELDS = [
-    new MavLinkPacketField('param1', 0, false, 4, 'float'),
-    new MavLinkPacketField('param2', 4, false, 4, 'float'),
-    new MavLinkPacketField('param3', 8, false, 4, 'float'),
-    new MavLinkPacketField('param4', 12, false, 4, 'float'),
-    new MavLinkPacketField('x', 16, false, 4, 'float'),
-    new MavLinkPacketField('y', 20, false, 4, 'float'),
-    new MavLinkPacketField('z', 24, false, 4, 'float'),
-    new MavLinkPacketField('seq', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('command', 30, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('frame', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('current', 35, false, 1, 'uint8_t'),
-    new MavLinkPacketField('autocontinue', 36, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 37, true, 1, 'uint8_t'),
+    new MavLinkPacketField('param1', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('param2', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('param3', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('param4', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('x', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('y', 20, false, 4, 'float', ''),
+    new MavLinkPacketField('z', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('seq', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('command', 30, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 32, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('frame', 34, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('current', 35, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('autocontinue', 36, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 37, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4163,10 +4194,10 @@ export class MissionRequest extends MavLinkData {
   static MAGIC_NUMBER = 230
 
   static FIELDS = [
-    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 4, true, 1, 'uint8_t'),
+    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 4, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4198,9 +4229,9 @@ export class MissionSetCurrent extends MavLinkData {
   static MAGIC_NUMBER = 28
 
   static FIELDS = [
-    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
+    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4228,7 +4259,7 @@ export class MissionCurrent extends MavLinkData {
   static MAGIC_NUMBER = 28
 
   static FIELDS = [
-    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t'),
+    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t', ''),
   ]
 
   /**
@@ -4247,9 +4278,9 @@ export class MissionRequestList extends MavLinkData {
   static MAGIC_NUMBER = 132
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 2, true, 1, 'uint8_t'),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 2, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4278,10 +4309,10 @@ export class MissionCount extends MavLinkData {
   static MAGIC_NUMBER = 221
 
   static FIELDS = [
-    new MavLinkPacketField('count', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 4, true, 1, 'uint8_t'),
+    new MavLinkPacketField('count', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 4, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4312,9 +4343,9 @@ export class MissionClearAll extends MavLinkData {
   static MAGIC_NUMBER = 232
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 2, true, 1, 'uint8_t'),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 2, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4342,7 +4373,7 @@ export class MissionItemReached extends MavLinkData {
   static MAGIC_NUMBER = 11
 
   static FIELDS = [
-    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t'),
+    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t', ''),
   ]
 
   /**
@@ -4362,10 +4393,10 @@ export class MissionAck extends MavLinkData {
   static MAGIC_NUMBER = 153
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 3, true, 1, 'uint8_t'),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 3, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4399,11 +4430,11 @@ export class SetGpsGlobalOrigin extends MavLinkData {
   static MAGIC_NUMBER = 41
 
   static FIELDS = [
-    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('altitude', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('targetSystem', 12, false, 1, 'uint8_t'),
-    new MavLinkPacketField('timeUsec', 13, true, 8, 'uint64_t'),
+    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('altitude', 8, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('targetSystem', 12, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('timeUsec', 13, true, 8, 'uint64_t', 'us'),
   ]
 
   /**
@@ -4440,10 +4471,10 @@ export class GpsGlobalOrigin extends MavLinkData {
   static MAGIC_NUMBER = 39
 
   static FIELDS = [
-    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('altitude', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('timeUsec', 12, true, 8, 'uint64_t'),
+    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('altitude', 8, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('timeUsec', 12, true, 8, 'uint64_t', 'us'),
   ]
 
   /**
@@ -4475,15 +4506,15 @@ export class ParamMapRc extends MavLinkData {
   static MAGIC_NUMBER = 78
 
   static FIELDS = [
-    new MavLinkPacketField('paramValue0', 0, false, 4, 'float'),
-    new MavLinkPacketField('scale', 4, false, 4, 'float'),
-    new MavLinkPacketField('paramValueMin', 8, false, 4, 'float'),
-    new MavLinkPacketField('paramValueMax', 12, false, 4, 'float'),
-    new MavLinkPacketField('paramIndex', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetSystem', 18, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 19, false, 1, 'uint8_t'),
-    new MavLinkPacketField('paramId', 20, false, 1, 'char[]', 16),
-    new MavLinkPacketField('parameterRcChannelIndex', 36, false, 1, 'uint8_t'),
+    new MavLinkPacketField('paramValue0', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('scale', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('paramValueMin', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('paramValueMax', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('paramIndex', 16, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('targetSystem', 18, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 19, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('paramId', 20, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('parameterRcChannelIndex', 36, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4541,10 +4572,10 @@ export class MissionRequestInt extends MavLinkData {
   static MAGIC_NUMBER = 196
 
   static FIELDS = [
-    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 4, true, 1, 'uint8_t'),
+    new MavLinkPacketField('seq', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 4, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4577,15 +4608,15 @@ export class SafetySetAllowedArea extends MavLinkData {
   static MAGIC_NUMBER = 15
 
   static FIELDS = [
-    new MavLinkPacketField('p1x', 0, false, 4, 'float'),
-    new MavLinkPacketField('p1y', 4, false, 4, 'float'),
-    new MavLinkPacketField('p1z', 8, false, 4, 'float'),
-    new MavLinkPacketField('p2x', 12, false, 4, 'float'),
-    new MavLinkPacketField('p2y', 16, false, 4, 'float'),
-    new MavLinkPacketField('p2z', 20, false, 4, 'float'),
-    new MavLinkPacketField('targetSystem', 24, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 25, false, 1, 'uint8_t'),
-    new MavLinkPacketField('frame', 26, false, 1, 'uint8_t'),
+    new MavLinkPacketField('p1x', 0, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p1y', 4, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p1z', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p2x', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p2y', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p2z', 20, false, 4, 'float', 'm'),
+    new MavLinkPacketField('targetSystem', 24, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 25, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('frame', 26, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4637,13 +4668,13 @@ export class SafetyAllowedArea extends MavLinkData {
   static MAGIC_NUMBER = 3
 
   static FIELDS = [
-    new MavLinkPacketField('p1x', 0, false, 4, 'float'),
-    new MavLinkPacketField('p1y', 4, false, 4, 'float'),
-    new MavLinkPacketField('p1z', 8, false, 4, 'float'),
-    new MavLinkPacketField('p2x', 12, false, 4, 'float'),
-    new MavLinkPacketField('p2y', 16, false, 4, 'float'),
-    new MavLinkPacketField('p2z', 20, false, 4, 'float'),
-    new MavLinkPacketField('frame', 24, false, 1, 'uint8_t'),
+    new MavLinkPacketField('p1x', 0, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p1y', 4, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p1z', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p2x', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p2y', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('p2z', 20, false, 4, 'float', 'm'),
+    new MavLinkPacketField('frame', 24, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4688,12 +4719,12 @@ export class AttitudeQuaternionCov extends MavLinkData {
   static MAGIC_NUMBER = 167
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('q', 8, false, 4, 'float[]', 4),
-    new MavLinkPacketField('rollspeed', 24, false, 4, 'float'),
-    new MavLinkPacketField('pitchspeed', 28, false, 4, 'float'),
-    new MavLinkPacketField('yawspeed', 32, false, 4, 'float'),
-    new MavLinkPacketField('covariance', 36, false, 4, 'float[]', 9),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('q', 8, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('rollspeed', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('pitchspeed', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yawspeed', 32, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('covariance', 36, false, 4, 'float[]', '', 9),
   ]
 
   /**
@@ -4735,14 +4766,14 @@ export class NavControllerOutput extends MavLinkData {
   static MAGIC_NUMBER = 183
 
   static FIELDS = [
-    new MavLinkPacketField('navRoll', 0, false, 4, 'float'),
-    new MavLinkPacketField('navPitch', 4, false, 4, 'float'),
-    new MavLinkPacketField('altError', 8, false, 4, 'float'),
-    new MavLinkPacketField('aspdError', 12, false, 4, 'float'),
-    new MavLinkPacketField('xtrackError', 16, false, 4, 'float'),
-    new MavLinkPacketField('navBearing', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetBearing', 22, false, 2, 'int16_t'),
-    new MavLinkPacketField('wpDist', 24, false, 2, 'uint16_t'),
+    new MavLinkPacketField('navRoll', 0, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('navPitch', 4, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('altError', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('aspdError', 12, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('xtrackError', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('navBearing', 20, false, 2, 'int16_t', 'deg'),
+    new MavLinkPacketField('targetBearing', 22, false, 2, 'int16_t', 'deg'),
+    new MavLinkPacketField('wpDist', 24, false, 2, 'uint16_t', 'm'),
   ]
 
   /**
@@ -4793,16 +4824,16 @@ export class GlobalPositionIntCov extends MavLinkData {
   static MAGIC_NUMBER = 119
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lat', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('relativeAlt', 20, false, 4, 'int32_t'),
-    new MavLinkPacketField('vx', 24, false, 4, 'float'),
-    new MavLinkPacketField('vy', 28, false, 4, 'float'),
-    new MavLinkPacketField('vz', 32, false, 4, 'float'),
-    new MavLinkPacketField('covariance', 36, false, 4, 'float[]', 36),
-    new MavLinkPacketField('estimatorType', 180, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('lat', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 12, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 16, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('relativeAlt', 20, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('vx', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 28, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 32, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('covariance', 36, false, 4, 'float[]', '', 36),
+    new MavLinkPacketField('estimatorType', 180, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4861,18 +4892,18 @@ export class LocalPositionNedCov extends MavLinkData {
   static MAGIC_NUMBER = 191
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('x', 8, false, 4, 'float'),
-    new MavLinkPacketField('y', 12, false, 4, 'float'),
-    new MavLinkPacketField('z', 16, false, 4, 'float'),
-    new MavLinkPacketField('vx', 20, false, 4, 'float'),
-    new MavLinkPacketField('vy', 24, false, 4, 'float'),
-    new MavLinkPacketField('vz', 28, false, 4, 'float'),
-    new MavLinkPacketField('ax', 32, false, 4, 'float'),
-    new MavLinkPacketField('ay', 36, false, 4, 'float'),
-    new MavLinkPacketField('az', 40, false, 4, 'float'),
-    new MavLinkPacketField('covariance', 44, false, 4, 'float[]', 45),
-    new MavLinkPacketField('estimatorType', 224, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('x', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vx', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 28, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('ax', 32, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('ay', 36, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('az', 40, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('covariance', 44, false, 4, 'float[]', '', 45),
+    new MavLinkPacketField('estimatorType', 224, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -4940,27 +4971,27 @@ export class RcChannels extends MavLinkData {
   static MAGIC_NUMBER = 118
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('chan1Raw', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan2Raw', 6, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan3Raw', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan4Raw', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan5Raw', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan6Raw', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan7Raw', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan8Raw', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan9Raw', 20, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan10Raw', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan11Raw', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan12Raw', 26, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan13Raw', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan14Raw', 30, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan15Raw', 32, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan16Raw', 34, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan17Raw', 36, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan18Raw', 38, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chancount', 40, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rssi', 41, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('chan1Raw', 4, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan2Raw', 6, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan3Raw', 8, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan4Raw', 10, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan5Raw', 12, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan6Raw', 14, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan7Raw', 16, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan8Raw', 18, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan9Raw', 20, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan10Raw', 22, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan11Raw', 24, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan12Raw', 26, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan13Raw', 28, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan14Raw', 30, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan15Raw', 32, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan16Raw', 34, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan17Raw', 36, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan18Raw', 38, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chancount', 40, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rssi', 41, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5064,11 +5095,11 @@ export class RequestDataStream extends MavLinkData {
   static MAGIC_NUMBER = 148
 
   static FIELDS = [
-    new MavLinkPacketField('reqMessageRate', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('reqStreamId', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('startStop', 5, false, 1, 'uint8_t'),
+    new MavLinkPacketField('reqMessageRate', 0, false, 2, 'uint16_t', 'Hz'),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('reqStreamId', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('startStop', 5, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5105,9 +5136,9 @@ export class DataStream extends MavLinkData {
   static MAGIC_NUMBER = 21
 
   static FIELDS = [
-    new MavLinkPacketField('messageRate', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('streamId', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('onOff', 3, false, 1, 'uint8_t'),
+    new MavLinkPacketField('messageRate', 0, false, 2, 'uint16_t', 'Hz'),
+    new MavLinkPacketField('streamId', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('onOff', 3, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5136,16 +5167,16 @@ export class ManualControl extends MavLinkData {
   static MAGIC_NUMBER = 243
 
   static FIELDS = [
-    new MavLinkPacketField('x', 0, false, 2, 'int16_t'),
-    new MavLinkPacketField('y', 2, false, 2, 'int16_t'),
-    new MavLinkPacketField('z', 4, false, 2, 'int16_t'),
-    new MavLinkPacketField('r', 6, false, 2, 'int16_t'),
-    new MavLinkPacketField('buttons', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('target', 10, false, 1, 'uint8_t'),
-    new MavLinkPacketField('buttons2', 11, true, 2, 'uint16_t'),
-    new MavLinkPacketField('enabledExtensions', 13, true, 1, 'uint8_t'),
-    new MavLinkPacketField('s', 14, true, 2, 'int16_t'),
-    new MavLinkPacketField('t', 16, true, 2, 'int16_t'),
+    new MavLinkPacketField('x', 0, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('y', 2, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('z', 4, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('r', 6, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('buttons', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('target', 10, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('buttons2', 11, true, 2, 'uint16_t', ''),
+    new MavLinkPacketField('enabledExtensions', 13, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('s', 14, true, 2, 'int16_t', ''),
+    new MavLinkPacketField('t', 16, true, 2, 'int16_t', ''),
   ]
 
   /**
@@ -5219,26 +5250,26 @@ export class RcChannelsOverride extends MavLinkData {
   static MAGIC_NUMBER = 124
 
   static FIELDS = [
-    new MavLinkPacketField('chan1Raw', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan2Raw', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan3Raw', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan4Raw', 6, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan5Raw', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan6Raw', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan7Raw', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan8Raw', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 16, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 17, false, 1, 'uint8_t'),
-    new MavLinkPacketField('chan9Raw', 18, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan10Raw', 20, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan11Raw', 22, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan12Raw', 24, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan13Raw', 26, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan14Raw', 28, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan15Raw', 30, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan16Raw', 32, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan17Raw', 34, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chan18Raw', 36, true, 2, 'uint16_t'),
+    new MavLinkPacketField('chan1Raw', 0, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan2Raw', 2, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan3Raw', 4, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan4Raw', 6, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan5Raw', 8, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan6Raw', 10, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan7Raw', 12, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan8Raw', 14, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('targetSystem', 16, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 17, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('chan9Raw', 18, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan10Raw', 20, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan11Raw', 22, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan12Raw', 24, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan13Raw', 26, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan14Raw', 28, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan15Raw', 30, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan16Raw', 32, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan17Raw', 34, true, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan18Raw', 36, true, 2, 'uint16_t', 'us'),
   ]
 
   /**
@@ -5356,21 +5387,21 @@ export class MissionItemInt extends MavLinkData {
   static MAGIC_NUMBER = 38
 
   static FIELDS = [
-    new MavLinkPacketField('param1', 0, false, 4, 'float'),
-    new MavLinkPacketField('param2', 4, false, 4, 'float'),
-    new MavLinkPacketField('param3', 8, false, 4, 'float'),
-    new MavLinkPacketField('param4', 12, false, 4, 'float'),
-    new MavLinkPacketField('x', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('y', 20, false, 4, 'int32_t'),
-    new MavLinkPacketField('z', 24, false, 4, 'float'),
-    new MavLinkPacketField('seq', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('command', 30, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('frame', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('current', 35, false, 1, 'uint8_t'),
-    new MavLinkPacketField('autocontinue', 36, false, 1, 'uint8_t'),
-    new MavLinkPacketField('missionType', 37, true, 1, 'uint8_t'),
+    new MavLinkPacketField('param1', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('param2', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('param3', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('param4', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('x', 16, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('y', 20, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('z', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('seq', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('command', 30, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 32, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('frame', 34, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('current', 35, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('autocontinue', 36, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('missionType', 37, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5446,12 +5477,12 @@ export class VfrHud extends MavLinkData {
   static MAGIC_NUMBER = 20
 
   static FIELDS = [
-    new MavLinkPacketField('airspeed', 0, false, 4, 'float'),
-    new MavLinkPacketField('groundspeed', 4, false, 4, 'float'),
-    new MavLinkPacketField('alt', 8, false, 4, 'float'),
-    new MavLinkPacketField('climb', 12, false, 4, 'float'),
-    new MavLinkPacketField('heading', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('throttle', 18, false, 2, 'uint16_t'),
+    new MavLinkPacketField('airspeed', 0, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('groundspeed', 4, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('alt', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('climb', 12, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('heading', 16, false, 2, 'int16_t', 'deg'),
+    new MavLinkPacketField('throttle', 18, false, 2, 'uint16_t', '%'),
   ]
 
   /**
@@ -5495,19 +5526,19 @@ export class CommandInt extends MavLinkData {
   static MAGIC_NUMBER = 158
 
   static FIELDS = [
-    new MavLinkPacketField('param1', 0, false, 4, 'float'),
-    new MavLinkPacketField('param2', 4, false, 4, 'float'),
-    new MavLinkPacketField('param3', 8, false, 4, 'float'),
-    new MavLinkPacketField('param4', 12, false, 4, 'float'),
-    new MavLinkPacketField('x', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('y', 20, false, 4, 'int32_t'),
-    new MavLinkPacketField('z', 24, false, 4, 'float'),
-    new MavLinkPacketField('command', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 31, false, 1, 'uint8_t'),
-    new MavLinkPacketField('frame', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('current', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('autocontinue', 34, false, 1, 'uint8_t'),
+    new MavLinkPacketField('param1', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('param2', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('param3', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('param4', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('x', 16, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('y', 20, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('z', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('command', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 30, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 31, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('frame', 32, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('current', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('autocontinue', 34, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5575,17 +5606,17 @@ export class CommandLong extends MavLinkData {
   static MAGIC_NUMBER = 152
 
   static FIELDS = [
-    new MavLinkPacketField('param1', 0, false, 4, 'float'),
-    new MavLinkPacketField('param2', 4, false, 4, 'float'),
-    new MavLinkPacketField('param3', 8, false, 4, 'float'),
-    new MavLinkPacketField('param4', 12, false, 4, 'float'),
-    new MavLinkPacketField('param5', 16, false, 4, 'float'),
-    new MavLinkPacketField('param6', 20, false, 4, 'float'),
-    new MavLinkPacketField('param7', 24, false, 4, 'float'),
-    new MavLinkPacketField('command', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 31, false, 1, 'uint8_t'),
-    new MavLinkPacketField('confirmation', 32, false, 1, 'uint8_t'),
+    new MavLinkPacketField('param1', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('param2', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('param3', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('param4', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('param5', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('param6', 20, false, 4, 'float', ''),
+    new MavLinkPacketField('param7', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('command', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 30, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 31, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('confirmation', 32, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5645,12 +5676,12 @@ export class CommandAck extends MavLinkData {
   static MAGIC_NUMBER = 143
 
   static FIELDS = [
-    new MavLinkPacketField('command', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('result', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('progress', 3, true, 1, 'uint8_t'),
-    new MavLinkPacketField('resultParam2', 4, true, 4, 'int32_t'),
-    new MavLinkPacketField('targetSystem', 8, true, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 9, true, 1, 'uint8_t'),
+    new MavLinkPacketField('command', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('result', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('progress', 3, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('resultParam2', 4, true, 4, 'int32_t', ''),
+    new MavLinkPacketField('targetSystem', 8, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 9, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5698,9 +5729,9 @@ export class CommandCancel extends MavLinkData {
   static MAGIC_NUMBER = 14
 
   static FIELDS = [
-    new MavLinkPacketField('command', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
+    new MavLinkPacketField('command', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5727,13 +5758,13 @@ export class ManualSetpoint extends MavLinkData {
   static MAGIC_NUMBER = 106
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('roll', 4, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 8, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 12, false, 4, 'float'),
-    new MavLinkPacketField('thrust', 16, false, 4, 'float'),
-    new MavLinkPacketField('modeSwitch', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('manualOverrideSwitch', 21, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('roll', 4, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('pitch', 8, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yaw', 12, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('thrust', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('modeSwitch', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('manualOverrideSwitch', 21, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5777,16 +5808,16 @@ export class SetAttitudeTarget extends MavLinkData {
   static MAGIC_NUMBER = 49
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('q', 4, false, 4, 'float[]', 4),
-    new MavLinkPacketField('bodyRollRate', 20, false, 4, 'float'),
-    new MavLinkPacketField('bodyPitchRate', 24, false, 4, 'float'),
-    new MavLinkPacketField('bodyYawRate', 28, false, 4, 'float'),
-    new MavLinkPacketField('thrust', 32, false, 4, 'float'),
-    new MavLinkPacketField('targetSystem', 36, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 37, false, 1, 'uint8_t'),
-    new MavLinkPacketField('typeMask', 38, false, 1, 'uint8_t'),
-    new MavLinkPacketField('thrustBody', 39, true, 4, 'float[]', 3),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('q', 4, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('bodyRollRate', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('bodyPitchRate', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('bodyYawRate', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('thrust', 32, false, 4, 'float', ''),
+    new MavLinkPacketField('targetSystem', 36, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 37, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('typeMask', 38, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('thrustBody', 39, true, 4, 'float[]', '', 3),
   ]
 
   /**
@@ -5843,13 +5874,13 @@ export class AttitudeTarget extends MavLinkData {
   static MAGIC_NUMBER = 22
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('q', 4, false, 4, 'float[]', 4),
-    new MavLinkPacketField('bodyRollRate', 20, false, 4, 'float'),
-    new MavLinkPacketField('bodyPitchRate', 24, false, 4, 'float'),
-    new MavLinkPacketField('bodyYawRate', 28, false, 4, 'float'),
-    new MavLinkPacketField('thrust', 32, false, 4, 'float'),
-    new MavLinkPacketField('typeMask', 36, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('q', 4, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('bodyRollRate', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('bodyPitchRate', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('bodyYawRate', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('thrust', 32, false, 4, 'float', ''),
+    new MavLinkPacketField('typeMask', 36, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5893,22 +5924,22 @@ export class SetPositionTargetLocalNed extends MavLinkData {
   static MAGIC_NUMBER = 143
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('x', 4, false, 4, 'float'),
-    new MavLinkPacketField('y', 8, false, 4, 'float'),
-    new MavLinkPacketField('z', 12, false, 4, 'float'),
-    new MavLinkPacketField('vx', 16, false, 4, 'float'),
-    new MavLinkPacketField('vy', 20, false, 4, 'float'),
-    new MavLinkPacketField('vz', 24, false, 4, 'float'),
-    new MavLinkPacketField('afx', 28, false, 4, 'float'),
-    new MavLinkPacketField('afy', 32, false, 4, 'float'),
-    new MavLinkPacketField('afz', 36, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 40, false, 4, 'float'),
-    new MavLinkPacketField('yawRate', 44, false, 4, 'float'),
-    new MavLinkPacketField('typeMask', 48, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 50, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 51, false, 1, 'uint8_t'),
-    new MavLinkPacketField('coordinateFrame', 52, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('x', 4, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vx', 16, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('afx', 28, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('afy', 32, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('afz', 36, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('yaw', 40, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yawRate', 44, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('typeMask', 48, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 50, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 51, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('coordinateFrame', 52, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -5990,20 +6021,20 @@ export class PositionTargetLocalNed extends MavLinkData {
   static MAGIC_NUMBER = 140
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('x', 4, false, 4, 'float'),
-    new MavLinkPacketField('y', 8, false, 4, 'float'),
-    new MavLinkPacketField('z', 12, false, 4, 'float'),
-    new MavLinkPacketField('vx', 16, false, 4, 'float'),
-    new MavLinkPacketField('vy', 20, false, 4, 'float'),
-    new MavLinkPacketField('vz', 24, false, 4, 'float'),
-    new MavLinkPacketField('afx', 28, false, 4, 'float'),
-    new MavLinkPacketField('afy', 32, false, 4, 'float'),
-    new MavLinkPacketField('afz', 36, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 40, false, 4, 'float'),
-    new MavLinkPacketField('yawRate', 44, false, 4, 'float'),
-    new MavLinkPacketField('typeMask', 48, false, 2, 'uint16_t'),
-    new MavLinkPacketField('coordinateFrame', 50, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('x', 4, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vx', 16, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('afx', 28, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('afy', 32, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('afz', 36, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('yaw', 40, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yawRate', 44, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('typeMask', 48, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('coordinateFrame', 50, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6076,22 +6107,22 @@ export class SetPositionTargetGlobalInt extends MavLinkData {
   static MAGIC_NUMBER = 5
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('latInt', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('lonInt', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 12, false, 4, 'float'),
-    new MavLinkPacketField('vx', 16, false, 4, 'float'),
-    new MavLinkPacketField('vy', 20, false, 4, 'float'),
-    new MavLinkPacketField('vz', 24, false, 4, 'float'),
-    new MavLinkPacketField('afx', 28, false, 4, 'float'),
-    new MavLinkPacketField('afy', 32, false, 4, 'float'),
-    new MavLinkPacketField('afz', 36, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 40, false, 4, 'float'),
-    new MavLinkPacketField('yawRate', 44, false, 4, 'float'),
-    new MavLinkPacketField('typeMask', 48, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 50, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 51, false, 1, 'uint8_t'),
-    new MavLinkPacketField('coordinateFrame', 52, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('latInt', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lonInt', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vx', 16, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('afx', 28, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('afy', 32, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('afz', 36, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('yaw', 40, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yawRate', 44, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('typeMask', 48, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 50, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 51, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('coordinateFrame', 52, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6175,20 +6206,20 @@ export class PositionTargetGlobalInt extends MavLinkData {
   static MAGIC_NUMBER = 150
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('latInt', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('lonInt', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 12, false, 4, 'float'),
-    new MavLinkPacketField('vx', 16, false, 4, 'float'),
-    new MavLinkPacketField('vy', 20, false, 4, 'float'),
-    new MavLinkPacketField('vz', 24, false, 4, 'float'),
-    new MavLinkPacketField('afx', 28, false, 4, 'float'),
-    new MavLinkPacketField('afy', 32, false, 4, 'float'),
-    new MavLinkPacketField('afz', 36, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 40, false, 4, 'float'),
-    new MavLinkPacketField('yawRate', 44, false, 4, 'float'),
-    new MavLinkPacketField('typeMask', 48, false, 2, 'uint16_t'),
-    new MavLinkPacketField('coordinateFrame', 50, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('latInt', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lonInt', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vx', 16, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('afx', 28, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('afy', 32, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('afz', 36, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('yaw', 40, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yawRate', 44, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('typeMask', 48, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('coordinateFrame', 50, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6264,13 +6295,13 @@ export class LocalPositionNedSystemGlobalOffset extends MavLinkData {
   static MAGIC_NUMBER = 231
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('x', 4, false, 4, 'float'),
-    new MavLinkPacketField('y', 8, false, 4, 'float'),
-    new MavLinkPacketField('z', 12, false, 4, 'float'),
-    new MavLinkPacketField('roll', 16, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 20, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 24, false, 4, 'float'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('x', 4, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('roll', 16, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitch', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yaw', 24, false, 4, 'float', 'rad'),
   ]
 
   /**
@@ -6316,22 +6347,22 @@ export class HilState extends MavLinkData {
   static MAGIC_NUMBER = 183
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('roll', 8, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 12, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 16, false, 4, 'float'),
-    new MavLinkPacketField('rollspeed', 20, false, 4, 'float'),
-    new MavLinkPacketField('pitchspeed', 24, false, 4, 'float'),
-    new MavLinkPacketField('yawspeed', 28, false, 4, 'float'),
-    new MavLinkPacketField('lat', 32, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 36, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 40, false, 4, 'int32_t'),
-    new MavLinkPacketField('vx', 44, false, 2, 'int16_t'),
-    new MavLinkPacketField('vy', 46, false, 2, 'int16_t'),
-    new MavLinkPacketField('vz', 48, false, 2, 'int16_t'),
-    new MavLinkPacketField('xacc', 50, false, 2, 'int16_t'),
-    new MavLinkPacketField('yacc', 52, false, 2, 'int16_t'),
-    new MavLinkPacketField('zacc', 54, false, 2, 'int16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('roll', 8, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitch', 12, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yaw', 16, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('rollspeed', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('pitchspeed', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yawspeed', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('lat', 32, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 36, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 40, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('vx', 44, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vy', 46, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vz', 48, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('xacc', 50, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('yacc', 52, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('zacc', 54, false, 2, 'int16_t', 'mG'),
   ]
 
   /**
@@ -6411,17 +6442,17 @@ export class HilControls extends MavLinkData {
   static MAGIC_NUMBER = 63
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('rollAilerons', 8, false, 4, 'float'),
-    new MavLinkPacketField('pitchElevator', 12, false, 4, 'float'),
-    new MavLinkPacketField('yawRudder', 16, false, 4, 'float'),
-    new MavLinkPacketField('throttle', 20, false, 4, 'float'),
-    new MavLinkPacketField('aux1', 24, false, 4, 'float'),
-    new MavLinkPacketField('aux2', 28, false, 4, 'float'),
-    new MavLinkPacketField('aux3', 32, false, 4, 'float'),
-    new MavLinkPacketField('aux4', 36, false, 4, 'float'),
-    new MavLinkPacketField('mode', 40, false, 1, 'uint8_t'),
-    new MavLinkPacketField('navMode', 41, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('rollAilerons', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('pitchElevator', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('yawRudder', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('throttle', 20, false, 4, 'float', ''),
+    new MavLinkPacketField('aux1', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('aux2', 28, false, 4, 'float', ''),
+    new MavLinkPacketField('aux3', 32, false, 4, 'float', ''),
+    new MavLinkPacketField('aux4', 36, false, 4, 'float', ''),
+    new MavLinkPacketField('mode', 40, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('navMode', 41, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6483,20 +6514,20 @@ export class HilRcInputsRaw extends MavLinkData {
   static MAGIC_NUMBER = 54
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('chan1Raw', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan2Raw', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan3Raw', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan4Raw', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan5Raw', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan6Raw', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan7Raw', 20, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan8Raw', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan9Raw', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan10Raw', 26, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan11Raw', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chan12Raw', 30, false, 2, 'uint16_t'),
-    new MavLinkPacketField('rssi', 32, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('chan1Raw', 8, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan2Raw', 10, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan3Raw', 12, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan4Raw', 14, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan5Raw', 16, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan6Raw', 18, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan7Raw', 20, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan8Raw', 22, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan9Raw', 24, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan10Raw', 26, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan11Raw', 28, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('chan12Raw', 30, false, 2, 'uint16_t', 'us'),
+    new MavLinkPacketField('rssi', 32, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6570,10 +6601,10 @@ export class HilActuatorControls extends MavLinkData {
   static MAGIC_NUMBER = 47
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('flags', 8, false, 8, 'uint64_t'),
-    new MavLinkPacketField('controls', 16, false, 4, 'float[]', 16),
-    new MavLinkPacketField('mode', 80, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('flags', 8, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('controls', 16, false, 4, 'float[]', '', 16),
+    new MavLinkPacketField('mode', 80, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6605,16 +6636,16 @@ export class OpticalFlow extends MavLinkData {
   static MAGIC_NUMBER = 175
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('flowCompMX', 8, false, 4, 'float'),
-    new MavLinkPacketField('flowCompMY', 12, false, 4, 'float'),
-    new MavLinkPacketField('groundDistance', 16, false, 4, 'float'),
-    new MavLinkPacketField('flowX', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('flowY', 22, false, 2, 'int16_t'),
-    new MavLinkPacketField('sensorId', 24, false, 1, 'uint8_t'),
-    new MavLinkPacketField('quality', 25, false, 1, 'uint8_t'),
-    new MavLinkPacketField('flowRateX', 26, true, 4, 'float'),
-    new MavLinkPacketField('flowRateY', 30, true, 4, 'float'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('flowCompMX', 8, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('flowCompMY', 12, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('groundDistance', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('flowX', 20, false, 2, 'int16_t', 'dpix'),
+    new MavLinkPacketField('flowY', 22, false, 2, 'int16_t', 'dpix'),
+    new MavLinkPacketField('sensorId', 24, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('quality', 25, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('flowRateX', 26, true, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('flowRateY', 30, true, 4, 'float', 'rad/s'),
   ]
 
   /**
@@ -6670,15 +6701,15 @@ export class GlobalVisionPositionEstimate extends MavLinkData {
   static MAGIC_NUMBER = 102
 
   static FIELDS = [
-    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('x', 8, false, 4, 'float'),
-    new MavLinkPacketField('y', 12, false, 4, 'float'),
-    new MavLinkPacketField('z', 16, false, 4, 'float'),
-    new MavLinkPacketField('roll', 20, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 24, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 28, false, 4, 'float'),
-    new MavLinkPacketField('covariance', 32, true, 4, 'float[]', 21),
-    new MavLinkPacketField('resetCounter', 116, true, 1, 'uint8_t'),
+    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('x', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('roll', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitch', 24, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yaw', 28, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('covariance', 32, true, 4, 'float[]', '', 21),
+    new MavLinkPacketField('resetCounter', 116, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6733,15 +6764,15 @@ export class VisionPositionEstimate extends MavLinkData {
   static MAGIC_NUMBER = 158
 
   static FIELDS = [
-    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('x', 8, false, 4, 'float'),
-    new MavLinkPacketField('y', 12, false, 4, 'float'),
-    new MavLinkPacketField('z', 16, false, 4, 'float'),
-    new MavLinkPacketField('roll', 20, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 24, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 28, false, 4, 'float'),
-    new MavLinkPacketField('covariance', 32, true, 4, 'float[]', 21),
-    new MavLinkPacketField('resetCounter', 116, true, 1, 'uint8_t'),
+    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('x', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('roll', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitch', 24, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yaw', 28, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('covariance', 32, true, 4, 'float[]', '', 21),
+    new MavLinkPacketField('resetCounter', 116, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6796,12 +6827,12 @@ export class VisionSpeedEstimate extends MavLinkData {
   static MAGIC_NUMBER = 208
 
   static FIELDS = [
-    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('x', 8, false, 4, 'float'),
-    new MavLinkPacketField('y', 12, false, 4, 'float'),
-    new MavLinkPacketField('z', 16, false, 4, 'float'),
-    new MavLinkPacketField('covariance', 20, true, 4, 'float[]', 9),
-    new MavLinkPacketField('resetCounter', 56, true, 1, 'uint8_t'),
+    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('x', 8, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('y', 12, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('z', 16, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('covariance', 20, true, 4, 'float[]', '', 9),
+    new MavLinkPacketField('resetCounter', 56, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6843,14 +6874,14 @@ export class ViconPositionEstimate extends MavLinkData {
   static MAGIC_NUMBER = 56
 
   static FIELDS = [
-    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('x', 8, false, 4, 'float'),
-    new MavLinkPacketField('y', 12, false, 4, 'float'),
-    new MavLinkPacketField('z', 16, false, 4, 'float'),
-    new MavLinkPacketField('roll', 20, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 24, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 28, false, 4, 'float'),
-    new MavLinkPacketField('covariance', 32, true, 4, 'float[]', 21),
+    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('x', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('roll', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitch', 24, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yaw', 28, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('covariance', 32, true, 4, 'float[]', '', 21),
   ]
 
   /**
@@ -6899,22 +6930,22 @@ export class HighresImu extends MavLinkData {
   static MAGIC_NUMBER = 93
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('xacc', 8, false, 4, 'float'),
-    new MavLinkPacketField('yacc', 12, false, 4, 'float'),
-    new MavLinkPacketField('zacc', 16, false, 4, 'float'),
-    new MavLinkPacketField('xgyro', 20, false, 4, 'float'),
-    new MavLinkPacketField('ygyro', 24, false, 4, 'float'),
-    new MavLinkPacketField('zgyro', 28, false, 4, 'float'),
-    new MavLinkPacketField('xmag', 32, false, 4, 'float'),
-    new MavLinkPacketField('ymag', 36, false, 4, 'float'),
-    new MavLinkPacketField('zmag', 40, false, 4, 'float'),
-    new MavLinkPacketField('absPressure', 44, false, 4, 'float'),
-    new MavLinkPacketField('diffPressure', 48, false, 4, 'float'),
-    new MavLinkPacketField('pressureAlt', 52, false, 4, 'float'),
-    new MavLinkPacketField('temperature', 56, false, 4, 'float'),
-    new MavLinkPacketField('fieldsUpdated', 60, false, 2, 'uint16_t'),
-    new MavLinkPacketField('id', 62, true, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('xacc', 8, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('yacc', 12, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('zacc', 16, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('xgyro', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('ygyro', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('zgyro', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('xmag', 32, false, 4, 'float', 'gauss'),
+    new MavLinkPacketField('ymag', 36, false, 4, 'float', 'gauss'),
+    new MavLinkPacketField('zmag', 40, false, 4, 'float', 'gauss'),
+    new MavLinkPacketField('absPressure', 44, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('diffPressure', 48, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('pressureAlt', 52, false, 4, 'float', ''),
+    new MavLinkPacketField('temperature', 56, false, 4, 'float', 'degC'),
+    new MavLinkPacketField('fieldsUpdated', 60, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('id', 62, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -6995,18 +7026,18 @@ export class OpticalFlowRad extends MavLinkData {
   static MAGIC_NUMBER = 138
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('integrationTimeUs', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('integratedX', 12, false, 4, 'float'),
-    new MavLinkPacketField('integratedY', 16, false, 4, 'float'),
-    new MavLinkPacketField('integratedXgyro', 20, false, 4, 'float'),
-    new MavLinkPacketField('integratedYgyro', 24, false, 4, 'float'),
-    new MavLinkPacketField('integratedZgyro', 28, false, 4, 'float'),
-    new MavLinkPacketField('timeDeltaDistanceUs', 32, false, 4, 'uint32_t'),
-    new MavLinkPacketField('distance', 36, false, 4, 'float'),
-    new MavLinkPacketField('temperature', 40, false, 2, 'int16_t'),
-    new MavLinkPacketField('sensorId', 42, false, 1, 'uint8_t'),
-    new MavLinkPacketField('quality', 43, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('integrationTimeUs', 8, false, 4, 'uint32_t', 'us'),
+    new MavLinkPacketField('integratedX', 12, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('integratedY', 16, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('integratedXgyro', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('integratedYgyro', 24, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('integratedZgyro', 28, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('timeDeltaDistanceUs', 32, false, 4, 'uint32_t', 'us'),
+    new MavLinkPacketField('distance', 36, false, 4, 'float', 'm'),
+    new MavLinkPacketField('temperature', 40, false, 2, 'int16_t', 'cdegC'),
+    new MavLinkPacketField('sensorId', 42, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('quality', 43, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -7074,22 +7105,22 @@ export class HilSensor extends MavLinkData {
   static MAGIC_NUMBER = 108
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('xacc', 8, false, 4, 'float'),
-    new MavLinkPacketField('yacc', 12, false, 4, 'float'),
-    new MavLinkPacketField('zacc', 16, false, 4, 'float'),
-    new MavLinkPacketField('xgyro', 20, false, 4, 'float'),
-    new MavLinkPacketField('ygyro', 24, false, 4, 'float'),
-    new MavLinkPacketField('zgyro', 28, false, 4, 'float'),
-    new MavLinkPacketField('xmag', 32, false, 4, 'float'),
-    new MavLinkPacketField('ymag', 36, false, 4, 'float'),
-    new MavLinkPacketField('zmag', 40, false, 4, 'float'),
-    new MavLinkPacketField('absPressure', 44, false, 4, 'float'),
-    new MavLinkPacketField('diffPressure', 48, false, 4, 'float'),
-    new MavLinkPacketField('pressureAlt', 52, false, 4, 'float'),
-    new MavLinkPacketField('temperature', 56, false, 4, 'float'),
-    new MavLinkPacketField('fieldsUpdated', 60, false, 4, 'uint32_t'),
-    new MavLinkPacketField('id', 64, true, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('xacc', 8, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('yacc', 12, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('zacc', 16, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('xgyro', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('ygyro', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('zgyro', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('xmag', 32, false, 4, 'float', 'gauss'),
+    new MavLinkPacketField('ymag', 36, false, 4, 'float', 'gauss'),
+    new MavLinkPacketField('zmag', 40, false, 4, 'float', 'gauss'),
+    new MavLinkPacketField('absPressure', 44, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('diffPressure', 48, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('pressureAlt', 52, false, 4, 'float', ''),
+    new MavLinkPacketField('temperature', 56, false, 4, 'float', 'degC'),
+    new MavLinkPacketField('fieldsUpdated', 60, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('id', 64, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -7169,27 +7200,27 @@ export class SimState extends MavLinkData {
   static MAGIC_NUMBER = 32
 
   static FIELDS = [
-    new MavLinkPacketField('q1', 0, false, 4, 'float'),
-    new MavLinkPacketField('q2', 4, false, 4, 'float'),
-    new MavLinkPacketField('q3', 8, false, 4, 'float'),
-    new MavLinkPacketField('q4', 12, false, 4, 'float'),
-    new MavLinkPacketField('roll', 16, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 20, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 24, false, 4, 'float'),
-    new MavLinkPacketField('xacc', 28, false, 4, 'float'),
-    new MavLinkPacketField('yacc', 32, false, 4, 'float'),
-    new MavLinkPacketField('zacc', 36, false, 4, 'float'),
-    new MavLinkPacketField('xgyro', 40, false, 4, 'float'),
-    new MavLinkPacketField('ygyro', 44, false, 4, 'float'),
-    new MavLinkPacketField('zgyro', 48, false, 4, 'float'),
-    new MavLinkPacketField('lat', 52, false, 4, 'float'),
-    new MavLinkPacketField('lon', 56, false, 4, 'float'),
-    new MavLinkPacketField('alt', 60, false, 4, 'float'),
-    new MavLinkPacketField('stdDevHorz', 64, false, 4, 'float'),
-    new MavLinkPacketField('stdDevVert', 68, false, 4, 'float'),
-    new MavLinkPacketField('vn', 72, false, 4, 'float'),
-    new MavLinkPacketField('ve', 76, false, 4, 'float'),
-    new MavLinkPacketField('vd', 80, false, 4, 'float'),
+    new MavLinkPacketField('q1', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('q2', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('q3', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('q4', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('roll', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('pitch', 20, false, 4, 'float', ''),
+    new MavLinkPacketField('yaw', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('xacc', 28, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('yacc', 32, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('zacc', 36, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('xgyro', 40, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('ygyro', 44, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('zgyro', 48, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('lat', 52, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('lon', 56, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('alt', 60, false, 4, 'float', 'm'),
+    new MavLinkPacketField('stdDevHorz', 64, false, 4, 'float', ''),
+    new MavLinkPacketField('stdDevVert', 68, false, 4, 'float', ''),
+    new MavLinkPacketField('vn', 72, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('ve', 76, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vd', 80, false, 4, 'float', 'm/s'),
   ]
 
   /**
@@ -7288,13 +7319,13 @@ export class RadioStatus extends MavLinkData {
   static MAGIC_NUMBER = 185
 
   static FIELDS = [
-    new MavLinkPacketField('rxerrors', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('fixed', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('rssi', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('remrssi', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('txbuf', 6, false, 1, 'uint8_t'),
-    new MavLinkPacketField('noise', 7, false, 1, 'uint8_t'),
-    new MavLinkPacketField('remnoise', 8, false, 1, 'uint8_t'),
+    new MavLinkPacketField('rxerrors', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('fixed', 2, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('rssi', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('remrssi', 5, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('txbuf', 6, false, 1, 'uint8_t', '%'),
+    new MavLinkPacketField('noise', 7, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('remnoise', 8, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -7341,10 +7372,10 @@ export class FileTransferProtocol extends MavLinkData {
   static MAGIC_NUMBER = 84
 
   static FIELDS = [
-    new MavLinkPacketField('targetNetwork', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetSystem', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('payload', 3, false, 1, 'uint8_t[]', 251),
+    new MavLinkPacketField('targetNetwork', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetSystem', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('payload', 3, false, 1, 'uint8_t[]', '', 251),
   ]
 
   /**
@@ -7378,8 +7409,8 @@ export class TimeSync extends MavLinkData {
   static MAGIC_NUMBER = 34
 
   static FIELDS = [
-    new MavLinkPacketField('tc1', 0, false, 8, 'int64_t'),
-    new MavLinkPacketField('ts1', 8, false, 8, 'int64_t'),
+    new MavLinkPacketField('tc1', 0, false, 8, 'int64_t', ''),
+    new MavLinkPacketField('ts1', 8, false, 8, 'int64_t', ''),
   ]
 
   /**
@@ -7402,8 +7433,8 @@ export class CameraTrigger extends MavLinkData {
   static MAGIC_NUMBER = 174
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('seq', 8, false, 4, 'uint32_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('seq', 8, false, 4, 'uint32_t', ''),
   ]
 
   /**
@@ -7429,21 +7460,21 @@ export class HilGps extends MavLinkData {
   static MAGIC_NUMBER = 124
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lat', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('eph', 20, false, 2, 'uint16_t'),
-    new MavLinkPacketField('epv', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('vel', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('vn', 26, false, 2, 'int16_t'),
-    new MavLinkPacketField('ve', 28, false, 2, 'int16_t'),
-    new MavLinkPacketField('vd', 30, false, 2, 'int16_t'),
-    new MavLinkPacketField('cog', 32, false, 2, 'uint16_t'),
-    new MavLinkPacketField('fixType', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('satellitesVisible', 35, false, 1, 'uint8_t'),
-    new MavLinkPacketField('id', 36, true, 1, 'uint8_t'),
-    new MavLinkPacketField('yaw', 37, true, 2, 'uint16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('lat', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 12, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 16, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('eph', 20, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('epv', 22, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('vel', 24, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('vn', 26, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('ve', 28, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vd', 30, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('cog', 32, false, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('fixType', 34, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('satellitesVisible', 35, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('id', 36, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('yaw', 37, true, 2, 'uint16_t', 'cdeg'),
   ]
 
   /**
@@ -7521,18 +7552,18 @@ export class HilOpticalFlow extends MavLinkData {
   static MAGIC_NUMBER = 237
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('integrationTimeUs', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('integratedX', 12, false, 4, 'float'),
-    new MavLinkPacketField('integratedY', 16, false, 4, 'float'),
-    new MavLinkPacketField('integratedXgyro', 20, false, 4, 'float'),
-    new MavLinkPacketField('integratedYgyro', 24, false, 4, 'float'),
-    new MavLinkPacketField('integratedZgyro', 28, false, 4, 'float'),
-    new MavLinkPacketField('timeDeltaDistanceUs', 32, false, 4, 'uint32_t'),
-    new MavLinkPacketField('distance', 36, false, 4, 'float'),
-    new MavLinkPacketField('temperature', 40, false, 2, 'int16_t'),
-    new MavLinkPacketField('sensorId', 42, false, 1, 'uint8_t'),
-    new MavLinkPacketField('quality', 43, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('integrationTimeUs', 8, false, 4, 'uint32_t', 'us'),
+    new MavLinkPacketField('integratedX', 12, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('integratedY', 16, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('integratedXgyro', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('integratedYgyro', 24, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('integratedZgyro', 28, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('timeDeltaDistanceUs', 32, false, 4, 'uint32_t', 'us'),
+    new MavLinkPacketField('distance', 36, false, 4, 'float', 'm'),
+    new MavLinkPacketField('temperature', 40, false, 2, 'int16_t', 'cdegC'),
+    new MavLinkPacketField('sensorId', 42, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('quality', 43, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -7601,22 +7632,22 @@ export class HilStateQuaternion extends MavLinkData {
   static MAGIC_NUMBER = 4
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('attitudeQuaternion', 8, false, 4, 'float[]', 4),
-    new MavLinkPacketField('rollspeed', 24, false, 4, 'float'),
-    new MavLinkPacketField('pitchspeed', 28, false, 4, 'float'),
-    new MavLinkPacketField('yawspeed', 32, false, 4, 'float'),
-    new MavLinkPacketField('lat', 36, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 40, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 44, false, 4, 'int32_t'),
-    new MavLinkPacketField('vx', 48, false, 2, 'int16_t'),
-    new MavLinkPacketField('vy', 50, false, 2, 'int16_t'),
-    new MavLinkPacketField('vz', 52, false, 2, 'int16_t'),
-    new MavLinkPacketField('indAirspeed', 54, false, 2, 'uint16_t'),
-    new MavLinkPacketField('trueAirspeed', 56, false, 2, 'uint16_t'),
-    new MavLinkPacketField('xacc', 58, false, 2, 'int16_t'),
-    new MavLinkPacketField('yacc', 60, false, 2, 'int16_t'),
-    new MavLinkPacketField('zacc', 62, false, 2, 'int16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('attitudeQuaternion', 8, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('rollspeed', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('pitchspeed', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yawspeed', 32, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('lat', 36, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 40, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 44, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('vx', 48, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vy', 50, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vz', 52, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('indAirspeed', 54, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('trueAirspeed', 56, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('xacc', 58, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('yacc', 60, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('zacc', 62, false, 2, 'int16_t', 'mG'),
   ]
 
   /**
@@ -7698,17 +7729,17 @@ export class ScaledImu2 extends MavLinkData {
   static MAGIC_NUMBER = 76
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('xacc', 4, false, 2, 'int16_t'),
-    new MavLinkPacketField('yacc', 6, false, 2, 'int16_t'),
-    new MavLinkPacketField('zacc', 8, false, 2, 'int16_t'),
-    new MavLinkPacketField('xgyro', 10, false, 2, 'int16_t'),
-    new MavLinkPacketField('ygyro', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('zgyro', 14, false, 2, 'int16_t'),
-    new MavLinkPacketField('xmag', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('ymag', 18, false, 2, 'int16_t'),
-    new MavLinkPacketField('zmag', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('temperature', 22, true, 2, 'int16_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('xacc', 4, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('yacc', 6, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('zacc', 8, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('xgyro', 10, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('ygyro', 12, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('zgyro', 14, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('xmag', 16, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('ymag', 18, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('zmag', 20, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('temperature', 22, true, 2, 'int16_t', 'cdegC'),
   ]
 
   /**
@@ -7769,10 +7800,10 @@ export class LogRequestList extends MavLinkData {
   static MAGIC_NUMBER = 128
 
   static FIELDS = [
-    new MavLinkPacketField('start', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('end', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
+    new MavLinkPacketField('start', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('end', 2, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -7803,11 +7834,11 @@ export class LogEntry extends MavLinkData {
   static MAGIC_NUMBER = 56
 
   static FIELDS = [
-    new MavLinkPacketField('timeUtc', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('size', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('id', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('numLogs', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('lastLogNum', 12, false, 2, 'uint16_t'),
+    new MavLinkPacketField('timeUtc', 0, false, 4, 'uint32_t', 's'),
+    new MavLinkPacketField('size', 4, false, 4, 'uint32_t', 'bytes'),
+    new MavLinkPacketField('id', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('numLogs', 10, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('lastLogNum', 12, false, 2, 'uint16_t', ''),
   ]
 
   /**
@@ -7842,11 +7873,11 @@ export class LogRequestData extends MavLinkData {
   static MAGIC_NUMBER = 116
 
   static FIELDS = [
-    new MavLinkPacketField('ofs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('count', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('id', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 10, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 11, false, 1, 'uint8_t'),
+    new MavLinkPacketField('ofs', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('count', 4, false, 4, 'uint32_t', 'bytes'),
+    new MavLinkPacketField('id', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 10, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 11, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -7881,10 +7912,10 @@ export class LogData extends MavLinkData {
   static MAGIC_NUMBER = 134
 
   static FIELDS = [
-    new MavLinkPacketField('ofs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('id', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('count', 6, false, 1, 'uint8_t'),
-    new MavLinkPacketField('data', 7, false, 1, 'uint8_t[]', 90),
+    new MavLinkPacketField('ofs', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('id', 4, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('count', 6, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('data', 7, false, 1, 'uint8_t[]', '', 90),
   ]
 
   /**
@@ -7915,8 +7946,8 @@ export class LogErase extends MavLinkData {
   static MAGIC_NUMBER = 237
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -7939,8 +7970,8 @@ export class LogRequestEnd extends MavLinkData {
   static MAGIC_NUMBER = 203
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -7963,10 +7994,10 @@ export class GpsInjectData extends MavLinkData {
   static MAGIC_NUMBER = 250
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('len', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('data', 3, false, 1, 'uint8_t[]', 110),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('len', 2, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('data', 3, false, 1, 'uint8_t[]', '', 110),
   ]
 
   /**
@@ -7997,24 +8028,24 @@ export class Gps2Raw extends MavLinkData {
   static MAGIC_NUMBER = 87
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lat', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('dgpsAge', 20, false, 4, 'uint32_t'),
-    new MavLinkPacketField('eph', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('epv', 26, false, 2, 'uint16_t'),
-    new MavLinkPacketField('vel', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('cog', 30, false, 2, 'uint16_t'),
-    new MavLinkPacketField('fixType', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('satellitesVisible', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('dgpsNumch', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('yaw', 35, true, 2, 'uint16_t'),
-    new MavLinkPacketField('altEllipsoid', 37, true, 4, 'int32_t'),
-    new MavLinkPacketField('hAcc', 41, true, 4, 'uint32_t'),
-    new MavLinkPacketField('vAcc', 45, true, 4, 'uint32_t'),
-    new MavLinkPacketField('velAcc', 49, true, 4, 'uint32_t'),
-    new MavLinkPacketField('hdgAcc', 53, true, 4, 'uint32_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('lat', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 12, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 16, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('dgpsAge', 20, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('eph', 24, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('epv', 26, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('vel', 28, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('cog', 30, false, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('fixType', 32, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('satellitesVisible', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('dgpsNumch', 34, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('yaw', 35, true, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('altEllipsoid', 37, true, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('hAcc', 41, true, 4, 'uint32_t', 'mm'),
+    new MavLinkPacketField('vAcc', 45, true, 4, 'uint32_t', 'mm'),
+    new MavLinkPacketField('velAcc', 49, true, 4, 'uint32_t', 'mm'),
+    new MavLinkPacketField('hdgAcc', 53, true, 4, 'uint32_t', 'degE5'),
   ]
 
   /**
@@ -8104,9 +8135,9 @@ export class PowerStatus extends MavLinkData {
   static MAGIC_NUMBER = 203
 
   static FIELDS = [
-    new MavLinkPacketField('Vcc', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('Vservo', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('flags', 4, false, 2, 'uint16_t'),
+    new MavLinkPacketField('Vcc', 0, false, 2, 'uint16_t', 'mV'),
+    new MavLinkPacketField('Vservo', 2, false, 2, 'uint16_t', 'mV'),
+    new MavLinkPacketField('flags', 4, false, 2, 'uint16_t', ''),
   ]
 
   /**
@@ -8136,14 +8167,14 @@ export class SerialControl extends MavLinkData {
   static MAGIC_NUMBER = 220
 
   static FIELDS = [
-    new MavLinkPacketField('baudrate', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('timeout', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('device', 6, false, 1, 'uint8_t'),
-    new MavLinkPacketField('flags', 7, false, 1, 'uint8_t'),
-    new MavLinkPacketField('count', 8, false, 1, 'uint8_t'),
-    new MavLinkPacketField('data', 9, false, 1, 'uint8_t[]', 70),
-    new MavLinkPacketField('targetSystem', 79, true, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 80, true, 1, 'uint8_t'),
+    new MavLinkPacketField('baudrate', 0, false, 4, 'uint32_t', 'bits/s'),
+    new MavLinkPacketField('timeout', 4, false, 2, 'uint16_t', 'ms'),
+    new MavLinkPacketField('device', 6, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('flags', 7, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('count', 8, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('data', 9, false, 1, 'uint8_t[]', '', 70),
+    new MavLinkPacketField('targetSystem', 79, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 80, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -8190,19 +8221,19 @@ export class GpsRtk extends MavLinkData {
   static MAGIC_NUMBER = 25
 
   static FIELDS = [
-    new MavLinkPacketField('timeLastBaselineMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('tow', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('baselineAMm', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('baselineBMm', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('baselineCMm', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('accuracy', 20, false, 4, 'uint32_t'),
-    new MavLinkPacketField('iarNumHypotheses', 24, false, 4, 'int32_t'),
-    new MavLinkPacketField('wn', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('rtkReceiverId', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rtkHealth', 31, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rtkRate', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('nsats', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('baselineCoordsType', 34, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeLastBaselineMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('tow', 4, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('baselineAMm', 8, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('baselineBMm', 12, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('baselineCMm', 16, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('accuracy', 20, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('iarNumHypotheses', 24, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('wn', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('rtkReceiverId', 30, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rtkHealth', 31, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rtkRate', 32, false, 1, 'uint8_t', 'Hz'),
+    new MavLinkPacketField('nsats', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('baselineCoordsType', 34, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -8269,19 +8300,19 @@ export class Gps2Rtk extends MavLinkData {
   static MAGIC_NUMBER = 226
 
   static FIELDS = [
-    new MavLinkPacketField('timeLastBaselineMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('tow', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('baselineAMm', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('baselineBMm', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('baselineCMm', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('accuracy', 20, false, 4, 'uint32_t'),
-    new MavLinkPacketField('iarNumHypotheses', 24, false, 4, 'int32_t'),
-    new MavLinkPacketField('wn', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('rtkReceiverId', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rtkHealth', 31, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rtkRate', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('nsats', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('baselineCoordsType', 34, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeLastBaselineMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('tow', 4, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('baselineAMm', 8, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('baselineBMm', 12, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('baselineCMm', 16, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('accuracy', 20, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('iarNumHypotheses', 24, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('wn', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('rtkReceiverId', 30, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rtkHealth', 31, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rtkRate', 32, false, 1, 'uint8_t', 'Hz'),
+    new MavLinkPacketField('nsats', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('baselineCoordsType', 34, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -8349,17 +8380,17 @@ export class ScaledImu3 extends MavLinkData {
   static MAGIC_NUMBER = 46
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('xacc', 4, false, 2, 'int16_t'),
-    new MavLinkPacketField('yacc', 6, false, 2, 'int16_t'),
-    new MavLinkPacketField('zacc', 8, false, 2, 'int16_t'),
-    new MavLinkPacketField('xgyro', 10, false, 2, 'int16_t'),
-    new MavLinkPacketField('ygyro', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('zgyro', 14, false, 2, 'int16_t'),
-    new MavLinkPacketField('xmag', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('ymag', 18, false, 2, 'int16_t'),
-    new MavLinkPacketField('zmag', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('temperature', 22, true, 2, 'int16_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('xacc', 4, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('yacc', 6, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('zacc', 8, false, 2, 'int16_t', 'mG'),
+    new MavLinkPacketField('xgyro', 10, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('ygyro', 12, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('zgyro', 14, false, 2, 'int16_t', 'mrad/s'),
+    new MavLinkPacketField('xmag', 16, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('ymag', 18, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('zmag', 20, false, 2, 'int16_t', 'mgauss'),
+    new MavLinkPacketField('temperature', 22, true, 2, 'int16_t', 'cdegC'),
   ]
 
   /**
@@ -8419,13 +8450,13 @@ export class DataTransmissionHandshake extends MavLinkData {
   static MAGIC_NUMBER = 29
 
   static FIELDS = [
-    new MavLinkPacketField('size', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('width', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('height', 6, false, 2, 'uint16_t'),
-    new MavLinkPacketField('packets', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('type', 10, false, 1, 'uint8_t'),
-    new MavLinkPacketField('payload', 11, false, 1, 'uint8_t'),
-    new MavLinkPacketField('jpgQuality', 12, false, 1, 'uint8_t'),
+    new MavLinkPacketField('size', 0, false, 4, 'uint32_t', 'bytes'),
+    new MavLinkPacketField('width', 4, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('height', 6, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('packets', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('type', 10, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('payload', 11, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('jpgQuality', 12, false, 1, 'uint8_t', '%'),
   ]
 
   /**
@@ -8470,8 +8501,8 @@ export class EncapsulatedData extends MavLinkData {
   static MAGIC_NUMBER = 223
 
   static FIELDS = [
-    new MavLinkPacketField('seqnr', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('data', 2, false, 1, 'uint8_t[]', 253),
+    new MavLinkPacketField('seqnr', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('data', 2, false, 1, 'uint8_t[]', '', 253),
   ]
 
   /**
@@ -8494,18 +8525,18 @@ export class DistanceSensor extends MavLinkData {
   static MAGIC_NUMBER = 85
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('minDistance', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('maxDistance', 6, false, 2, 'uint16_t'),
-    new MavLinkPacketField('currentDistance', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('type', 10, false, 1, 'uint8_t'),
-    new MavLinkPacketField('id', 11, false, 1, 'uint8_t'),
-    new MavLinkPacketField('orientation', 12, false, 1, 'uint8_t'),
-    new MavLinkPacketField('covariance', 13, false, 1, 'uint8_t'),
-    new MavLinkPacketField('horizontalFov', 14, true, 4, 'float'),
-    new MavLinkPacketField('verticalFov', 18, true, 4, 'float'),
-    new MavLinkPacketField('quaternion', 22, true, 4, 'float[]', 4),
-    new MavLinkPacketField('signalQuality', 38, true, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('minDistance', 4, false, 2, 'uint16_t', 'cm'),
+    new MavLinkPacketField('maxDistance', 6, false, 2, 'uint16_t', 'cm'),
+    new MavLinkPacketField('currentDistance', 8, false, 2, 'uint16_t', 'cm'),
+    new MavLinkPacketField('type', 10, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('id', 11, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('orientation', 12, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('covariance', 13, false, 1, 'uint8_t', 'cm^2'),
+    new MavLinkPacketField('horizontalFov', 14, true, 4, 'float', 'rad'),
+    new MavLinkPacketField('verticalFov', 18, true, 4, 'float', 'rad'),
+    new MavLinkPacketField('quaternion', 22, true, 4, 'float[]', '', 4),
+    new MavLinkPacketField('signalQuality', 38, true, 1, 'uint8_t', '%'),
   ]
 
   /**
@@ -8577,10 +8608,10 @@ export class TerrainRequest extends MavLinkData {
   static MAGIC_NUMBER = 6
 
   static FIELDS = [
-    new MavLinkPacketField('mask', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lat', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('gridSpacing', 16, false, 2, 'uint16_t'),
+    new MavLinkPacketField('mask', 0, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('lat', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 12, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('gridSpacing', 16, false, 2, 'uint16_t', 'm'),
   ]
 
   /**
@@ -8612,11 +8643,11 @@ export class TerrainData extends MavLinkData {
   static MAGIC_NUMBER = 229
 
   static FIELDS = [
-    new MavLinkPacketField('lat', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('gridSpacing', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('data', 10, false, 2, 'int16_t[]', 16),
-    new MavLinkPacketField('gridbit', 42, false, 1, 'uint8_t'),
+    new MavLinkPacketField('lat', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('gridSpacing', 8, false, 2, 'uint16_t', 'm'),
+    new MavLinkPacketField('data', 10, false, 2, 'int16_t[]', 'm', 16),
+    new MavLinkPacketField('gridbit', 42, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -8652,8 +8683,8 @@ export class TerrainCheck extends MavLinkData {
   static MAGIC_NUMBER = 203
 
   static FIELDS = [
-    new MavLinkPacketField('lat', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 4, false, 4, 'int32_t'),
+    new MavLinkPacketField('lat', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 4, false, 4, 'int32_t', 'degE7'),
   ]
 
   /**
@@ -8678,13 +8709,13 @@ export class TerrainReport extends MavLinkData {
   static MAGIC_NUMBER = 1
 
   static FIELDS = [
-    new MavLinkPacketField('lat', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('terrainHeight', 8, false, 4, 'float'),
-    new MavLinkPacketField('currentHeight', 12, false, 4, 'float'),
-    new MavLinkPacketField('spacing', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('pending', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('loaded', 20, false, 2, 'uint16_t'),
+    new MavLinkPacketField('lat', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('terrainHeight', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('currentHeight', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('spacing', 16, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('pending', 18, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('loaded', 20, false, 2, 'uint16_t', ''),
   ]
 
   /**
@@ -8727,11 +8758,11 @@ export class ScaledPressure2 extends MavLinkData {
   static MAGIC_NUMBER = 195
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('pressAbs', 4, false, 4, 'float'),
-    new MavLinkPacketField('pressDiff', 8, false, 4, 'float'),
-    new MavLinkPacketField('temperature', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('temperaturePressDiff', 14, true, 2, 'int16_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('pressAbs', 4, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('pressDiff', 8, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('temperature', 12, false, 2, 'int16_t', 'cdegC'),
+    new MavLinkPacketField('temperaturePressDiff', 14, true, 2, 'int16_t', 'cdegC'),
   ]
 
   /**
@@ -8766,12 +8797,12 @@ export class MotionCaptureAttPos extends MavLinkData {
   static MAGIC_NUMBER = 109
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('q', 8, false, 4, 'float[]', 4),
-    new MavLinkPacketField('x', 24, false, 4, 'float'),
-    new MavLinkPacketField('y', 28, false, 4, 'float'),
-    new MavLinkPacketField('z', 32, false, 4, 'float'),
-    new MavLinkPacketField('covariance', 36, true, 4, 'float[]', 21),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('q', 8, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('x', 24, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 28, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 32, false, 4, 'float', 'm'),
+    new MavLinkPacketField('covariance', 36, true, 4, 'float[]', '', 21),
   ]
 
   /**
@@ -8813,11 +8844,11 @@ export class SetActuatorControlTarget extends MavLinkData {
   static MAGIC_NUMBER = 168
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('controls', 8, false, 4, 'float[]', 8),
-    new MavLinkPacketField('groupMlx', 40, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetSystem', 41, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 42, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('controls', 8, false, 4, 'float[]', '', 8),
+    new MavLinkPacketField('groupMlx', 40, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetSystem', 41, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 42, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -8857,9 +8888,9 @@ export class ActuatorControlTarget extends MavLinkData {
   static MAGIC_NUMBER = 181
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('controls', 8, false, 4, 'float[]', 8),
-    new MavLinkPacketField('groupMlx', 40, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('controls', 8, false, 4, 'float[]', '', 8),
+    new MavLinkPacketField('groupMlx', 40, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -8891,13 +8922,13 @@ export class Altitude extends MavLinkData {
   static MAGIC_NUMBER = 47
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('altitudeMonotonic', 8, false, 4, 'float'),
-    new MavLinkPacketField('altitudeAmsl', 12, false, 4, 'float'),
-    new MavLinkPacketField('altitudeLocal', 16, false, 4, 'float'),
-    new MavLinkPacketField('altitudeRelative', 20, false, 4, 'float'),
-    new MavLinkPacketField('altitudeTerrain', 24, false, 4, 'float'),
-    new MavLinkPacketField('bottomClearance', 28, false, 4, 'float'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('altitudeMonotonic', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('altitudeAmsl', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('altitudeLocal', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('altitudeRelative', 20, false, 4, 'float', 'm'),
+    new MavLinkPacketField('altitudeTerrain', 24, false, 4, 'float', 'm'),
+    new MavLinkPacketField('bottomClearance', 28, false, 4, 'float', 'm'),
   ]
 
   /**
@@ -8951,11 +8982,11 @@ export class ResourceRequest extends MavLinkData {
   static MAGIC_NUMBER = 72
 
   static FIELDS = [
-    new MavLinkPacketField('requestId', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('uriType', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('uri', 2, false, 1, 'uint8_t[]', 120),
-    new MavLinkPacketField('transferType', 122, false, 1, 'uint8_t'),
-    new MavLinkPacketField('storage', 123, false, 1, 'uint8_t[]', 120),
+    new MavLinkPacketField('requestId', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('uriType', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('uri', 2, false, 1, 'uint8_t[]', '', 120),
+    new MavLinkPacketField('transferType', 122, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('storage', 123, false, 1, 'uint8_t[]', '', 120),
   ]
 
   /**
@@ -8992,11 +9023,11 @@ export class ScaledPressure3 extends MavLinkData {
   static MAGIC_NUMBER = 131
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('pressAbs', 4, false, 4, 'float'),
-    new MavLinkPacketField('pressDiff', 8, false, 4, 'float'),
-    new MavLinkPacketField('temperature', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('temperaturePressDiff', 14, true, 2, 'int16_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('pressAbs', 4, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('pressDiff', 8, false, 4, 'float', 'hPa'),
+    new MavLinkPacketField('temperature', 12, false, 2, 'int16_t', 'cdegC'),
+    new MavLinkPacketField('temperaturePressDiff', 14, true, 2, 'int16_t', 'cdegC'),
   ]
 
   /**
@@ -9031,17 +9062,17 @@ export class FollowTarget extends MavLinkData {
   static MAGIC_NUMBER = 127
 
   static FIELDS = [
-    new MavLinkPacketField('timestamp', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('customState', 8, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lat', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 20, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 24, false, 4, 'float'),
-    new MavLinkPacketField('vel', 28, false, 4, 'float[]', 3),
-    new MavLinkPacketField('acc', 40, false, 4, 'float[]', 3),
-    new MavLinkPacketField('attitudeQ', 52, false, 4, 'float[]', 4),
-    new MavLinkPacketField('rates', 68, false, 4, 'float[]', 3),
-    new MavLinkPacketField('positionCov', 80, false, 4, 'float[]', 3),
-    new MavLinkPacketField('estCapabilities', 92, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timestamp', 0, false, 8, 'uint64_t', 'ms'),
+    new MavLinkPacketField('customState', 8, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('lat', 16, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 20, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 24, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vel', 28, false, 4, 'float[]', 'm/s', 3),
+    new MavLinkPacketField('acc', 40, false, 4, 'float[]', 'm/s/s', 3),
+    new MavLinkPacketField('attitudeQ', 52, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('rates', 68, false, 4, 'float[]', '', 3),
+    new MavLinkPacketField('positionCov', 80, false, 4, 'float[]', '', 3),
+    new MavLinkPacketField('estCapabilities', 92, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -9100,23 +9131,23 @@ export class ControlSystemState extends MavLinkData {
   static MAGIC_NUMBER = 103
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('xAcc', 8, false, 4, 'float'),
-    new MavLinkPacketField('yAcc', 12, false, 4, 'float'),
-    new MavLinkPacketField('zAcc', 16, false, 4, 'float'),
-    new MavLinkPacketField('xVel', 20, false, 4, 'float'),
-    new MavLinkPacketField('yVel', 24, false, 4, 'float'),
-    new MavLinkPacketField('zVel', 28, false, 4, 'float'),
-    new MavLinkPacketField('xPos', 32, false, 4, 'float'),
-    new MavLinkPacketField('yPos', 36, false, 4, 'float'),
-    new MavLinkPacketField('zPos', 40, false, 4, 'float'),
-    new MavLinkPacketField('airspeed', 44, false, 4, 'float'),
-    new MavLinkPacketField('velVariance', 48, false, 4, 'float[]', 3),
-    new MavLinkPacketField('posVariance', 60, false, 4, 'float[]', 3),
-    new MavLinkPacketField('q', 72, false, 4, 'float[]', 4),
-    new MavLinkPacketField('rollRate', 88, false, 4, 'float'),
-    new MavLinkPacketField('pitchRate', 92, false, 4, 'float'),
-    new MavLinkPacketField('yawRate', 96, false, 4, 'float'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('xAcc', 8, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('yAcc', 12, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('zAcc', 16, false, 4, 'float', 'm/s/s'),
+    new MavLinkPacketField('xVel', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('yVel', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('zVel', 28, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('xPos', 32, false, 4, 'float', 'm'),
+    new MavLinkPacketField('yPos', 36, false, 4, 'float', 'm'),
+    new MavLinkPacketField('zPos', 40, false, 4, 'float', 'm'),
+    new MavLinkPacketField('airspeed', 44, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('velVariance', 48, false, 4, 'float[]', '', 3),
+    new MavLinkPacketField('posVariance', 60, false, 4, 'float[]', '', 3),
+    new MavLinkPacketField('q', 72, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('rollRate', 88, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('pitchRate', 92, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yawRate', 96, false, 4, 'float', 'rad/s'),
   ]
 
   /**
@@ -9201,20 +9232,20 @@ export class BatteryStatus extends MavLinkData {
   static MAGIC_NUMBER = 154
 
   static FIELDS = [
-    new MavLinkPacketField('currentConsumed', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('energyConsumed', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('temperature', 8, false, 2, 'int16_t'),
-    new MavLinkPacketField('voltages', 10, false, 2, 'uint16_t[]', 10),
-    new MavLinkPacketField('currentBattery', 30, false, 2, 'int16_t'),
-    new MavLinkPacketField('id', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('batteryFunction', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('batteryRemaining', 35, false, 1, 'int8_t'),
-    new MavLinkPacketField('timeRemaining', 36, true, 4, 'int32_t'),
-    new MavLinkPacketField('chargeState', 40, true, 1, 'uint8_t'),
-    new MavLinkPacketField('voltagesExt', 41, true, 2, 'uint16_t[]', 4),
-    new MavLinkPacketField('mode', 49, true, 1, 'uint8_t'),
-    new MavLinkPacketField('faultBitmask', 50, true, 4, 'uint32_t'),
+    new MavLinkPacketField('currentConsumed', 0, false, 4, 'int32_t', 'mAh'),
+    new MavLinkPacketField('energyConsumed', 4, false, 4, 'int32_t', 'hJ'),
+    new MavLinkPacketField('temperature', 8, false, 2, 'int16_t', 'cdegC'),
+    new MavLinkPacketField('voltages', 10, false, 2, 'uint16_t[]', 'mV', 10),
+    new MavLinkPacketField('currentBattery', 30, false, 2, 'int16_t', 'cA'),
+    new MavLinkPacketField('id', 32, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('batteryFunction', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type', 34, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('batteryRemaining', 35, false, 1, 'int8_t', '%'),
+    new MavLinkPacketField('timeRemaining', 36, true, 4, 'int32_t', 's'),
+    new MavLinkPacketField('chargeState', 40, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('voltagesExt', 41, true, 2, 'uint16_t[]', 'mV', 4),
+    new MavLinkPacketField('mode', 49, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('faultBitmask', 50, true, 4, 'uint32_t', ''),
   ]
 
   /**
@@ -9295,18 +9326,18 @@ export class AutopilotVersion extends MavLinkData {
   static MAGIC_NUMBER = 178
 
   static FIELDS = [
-    new MavLinkPacketField('capabilities', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('uid', 8, false, 8, 'uint64_t'),
-    new MavLinkPacketField('flightSwVersion', 16, false, 4, 'uint32_t'),
-    new MavLinkPacketField('middlewareSwVersion', 20, false, 4, 'uint32_t'),
-    new MavLinkPacketField('osSwVersion', 24, false, 4, 'uint32_t'),
-    new MavLinkPacketField('boardVersion', 28, false, 4, 'uint32_t'),
-    new MavLinkPacketField('vendorId', 32, false, 2, 'uint16_t'),
-    new MavLinkPacketField('productId', 34, false, 2, 'uint16_t'),
-    new MavLinkPacketField('flightCustomVersion', 36, false, 1, 'uint8_t[]', 8),
-    new MavLinkPacketField('middlewareCustomVersion', 44, false, 1, 'uint8_t[]', 8),
-    new MavLinkPacketField('osCustomVersion', 52, false, 1, 'uint8_t[]', 8),
-    new MavLinkPacketField('uid2', 60, true, 1, 'uint8_t[]', 18),
+    new MavLinkPacketField('capabilities', 0, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('uid', 8, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('flightSwVersion', 16, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('middlewareSwVersion', 20, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('osSwVersion', 24, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('boardVersion', 28, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('vendorId', 32, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('productId', 34, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('flightCustomVersion', 36, false, 1, 'uint8_t[]', '', 8),
+    new MavLinkPacketField('middlewareCustomVersion', 44, false, 1, 'uint8_t[]', '', 8),
+    new MavLinkPacketField('osCustomVersion', 52, false, 1, 'uint8_t[]', '', 8),
+    new MavLinkPacketField('uid2', 60, true, 1, 'uint8_t[]', '', 18),
   ]
 
   /**
@@ -9377,20 +9408,20 @@ export class LandingTarget extends MavLinkData {
   static MAGIC_NUMBER = 200
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('angleX', 8, false, 4, 'float'),
-    new MavLinkPacketField('angleY', 12, false, 4, 'float'),
-    new MavLinkPacketField('distance', 16, false, 4, 'float'),
-    new MavLinkPacketField('sizeX', 20, false, 4, 'float'),
-    new MavLinkPacketField('sizeY', 24, false, 4, 'float'),
-    new MavLinkPacketField('targetNum', 28, false, 1, 'uint8_t'),
-    new MavLinkPacketField('frame', 29, false, 1, 'uint8_t'),
-    new MavLinkPacketField('x', 30, true, 4, 'float'),
-    new MavLinkPacketField('y', 34, true, 4, 'float'),
-    new MavLinkPacketField('z', 38, true, 4, 'float'),
-    new MavLinkPacketField('q', 42, true, 4, 'float[]', 4),
-    new MavLinkPacketField('type', 58, true, 1, 'uint8_t'),
-    new MavLinkPacketField('positionValid', 59, true, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('angleX', 8, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('angleY', 12, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('distance', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('sizeX', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('sizeY', 24, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('targetNum', 28, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('frame', 29, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('x', 30, true, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 34, true, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 38, true, 4, 'float', 'm'),
+    new MavLinkPacketField('q', 42, true, 4, 'float[]', '', 4),
+    new MavLinkPacketField('type', 58, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('positionValid', 59, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -9463,11 +9494,11 @@ export class FenceStatus extends MavLinkData {
   static MAGIC_NUMBER = 189
 
   static FIELDS = [
-    new MavLinkPacketField('breachTime', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('breachCount', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('breachStatus', 6, false, 1, 'uint8_t'),
-    new MavLinkPacketField('breachType', 7, false, 1, 'uint8_t'),
-    new MavLinkPacketField('breachMitigation', 8, true, 1, 'uint8_t'),
+    new MavLinkPacketField('breachTime', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('breachCount', 4, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('breachStatus', 6, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('breachType', 7, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('breachMitigation', 8, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -9502,24 +9533,24 @@ export class MagCalReport extends MavLinkData {
   static MAGIC_NUMBER = 36
 
   static FIELDS = [
-    new MavLinkPacketField('fitness', 0, false, 4, 'float'),
-    new MavLinkPacketField('ofsX', 4, false, 4, 'float'),
-    new MavLinkPacketField('ofsY', 8, false, 4, 'float'),
-    new MavLinkPacketField('ofsZ', 12, false, 4, 'float'),
-    new MavLinkPacketField('diagX', 16, false, 4, 'float'),
-    new MavLinkPacketField('diagY', 20, false, 4, 'float'),
-    new MavLinkPacketField('diagZ', 24, false, 4, 'float'),
-    new MavLinkPacketField('offdiagX', 28, false, 4, 'float'),
-    new MavLinkPacketField('offdiagY', 32, false, 4, 'float'),
-    new MavLinkPacketField('offdiagZ', 36, false, 4, 'float'),
-    new MavLinkPacketField('compassId', 40, false, 1, 'uint8_t'),
-    new MavLinkPacketField('calMask', 41, false, 1, 'uint8_t'),
-    new MavLinkPacketField('calStatus', 42, false, 1, 'uint8_t'),
-    new MavLinkPacketField('autosaved', 43, false, 1, 'uint8_t'),
-    new MavLinkPacketField('orientationConfidence', 44, true, 4, 'float'),
-    new MavLinkPacketField('oldOrientation', 48, true, 1, 'uint8_t'),
-    new MavLinkPacketField('newOrientation', 49, true, 1, 'uint8_t'),
-    new MavLinkPacketField('scaleFactor', 50, true, 4, 'float'),
+    new MavLinkPacketField('fitness', 0, false, 4, 'float', 'mgauss'),
+    new MavLinkPacketField('ofsX', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('ofsY', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('ofsZ', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('diagX', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('diagY', 20, false, 4, 'float', ''),
+    new MavLinkPacketField('diagZ', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('offdiagX', 28, false, 4, 'float', ''),
+    new MavLinkPacketField('offdiagY', 32, false, 4, 'float', ''),
+    new MavLinkPacketField('offdiagZ', 36, false, 4, 'float', ''),
+    new MavLinkPacketField('compassId', 40, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('calMask', 41, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('calStatus', 42, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('autosaved', 43, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('orientationConfidence', 44, true, 4, 'float', ''),
+    new MavLinkPacketField('oldOrientation', 48, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('newOrientation', 49, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('scaleFactor', 50, true, 4, 'float', ''),
   ]
 
   /**
@@ -9606,23 +9637,23 @@ export class EfiStatus extends MavLinkData {
   static MAGIC_NUMBER = 208
 
   static FIELDS = [
-    new MavLinkPacketField('ecuIndex', 0, false, 4, 'float'),
-    new MavLinkPacketField('rpm', 4, false, 4, 'float'),
-    new MavLinkPacketField('fuelConsumed', 8, false, 4, 'float'),
-    new MavLinkPacketField('fuelFlow', 12, false, 4, 'float'),
-    new MavLinkPacketField('engineLoad', 16, false, 4, 'float'),
-    new MavLinkPacketField('throttlePosition', 20, false, 4, 'float'),
-    new MavLinkPacketField('sparkDwellTime', 24, false, 4, 'float'),
-    new MavLinkPacketField('barometricPressure', 28, false, 4, 'float'),
-    new MavLinkPacketField('intakeManifoldPressure', 32, false, 4, 'float'),
-    new MavLinkPacketField('intakeManifoldTemperature', 36, false, 4, 'float'),
-    new MavLinkPacketField('cylinderHeadTemperature', 40, false, 4, 'float'),
-    new MavLinkPacketField('ignitionTiming', 44, false, 4, 'float'),
-    new MavLinkPacketField('injectionTime', 48, false, 4, 'float'),
-    new MavLinkPacketField('exhaustGasTemperature', 52, false, 4, 'float'),
-    new MavLinkPacketField('throttleOut', 56, false, 4, 'float'),
-    new MavLinkPacketField('ptCompensation', 60, false, 4, 'float'),
-    new MavLinkPacketField('health', 64, false, 1, 'uint8_t'),
+    new MavLinkPacketField('ecuIndex', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('rpm', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('fuelConsumed', 8, false, 4, 'float', 'cm^3'),
+    new MavLinkPacketField('fuelFlow', 12, false, 4, 'float', 'cm^3/min'),
+    new MavLinkPacketField('engineLoad', 16, false, 4, 'float', '%'),
+    new MavLinkPacketField('throttlePosition', 20, false, 4, 'float', '%'),
+    new MavLinkPacketField('sparkDwellTime', 24, false, 4, 'float', 'ms'),
+    new MavLinkPacketField('barometricPressure', 28, false, 4, 'float', 'kPa'),
+    new MavLinkPacketField('intakeManifoldPressure', 32, false, 4, 'float', 'kPa'),
+    new MavLinkPacketField('intakeManifoldTemperature', 36, false, 4, 'float', 'degC'),
+    new MavLinkPacketField('cylinderHeadTemperature', 40, false, 4, 'float', 'degC'),
+    new MavLinkPacketField('ignitionTiming', 44, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('injectionTime', 48, false, 4, 'float', 'ms'),
+    new MavLinkPacketField('exhaustGasTemperature', 52, false, 4, 'float', 'degC'),
+    new MavLinkPacketField('throttleOut', 56, false, 4, 'float', '%'),
+    new MavLinkPacketField('ptCompensation', 60, false, 4, 'float', ''),
+    new MavLinkPacketField('health', 64, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -9713,16 +9744,16 @@ export class EstimatorStatus extends MavLinkData {
   static MAGIC_NUMBER = 163
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('velRatio', 8, false, 4, 'float'),
-    new MavLinkPacketField('posHorizRatio', 12, false, 4, 'float'),
-    new MavLinkPacketField('posVertRatio', 16, false, 4, 'float'),
-    new MavLinkPacketField('magRatio', 20, false, 4, 'float'),
-    new MavLinkPacketField('haglRatio', 24, false, 4, 'float'),
-    new MavLinkPacketField('tasRatio', 28, false, 4, 'float'),
-    new MavLinkPacketField('posHorizAccuracy', 32, false, 4, 'float'),
-    new MavLinkPacketField('posVertAccuracy', 36, false, 4, 'float'),
-    new MavLinkPacketField('flags', 40, false, 2, 'uint16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('velRatio', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('posHorizRatio', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('posVertRatio', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('magRatio', 20, false, 4, 'float', ''),
+    new MavLinkPacketField('haglRatio', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('tasRatio', 28, false, 4, 'float', ''),
+    new MavLinkPacketField('posHorizAccuracy', 32, false, 4, 'float', 'm'),
+    new MavLinkPacketField('posVertAccuracy', 36, false, 4, 'float', 'm'),
+    new MavLinkPacketField('flags', 40, false, 2, 'uint16_t', ''),
   ]
 
   /**
@@ -9778,15 +9809,15 @@ export class WindCov extends MavLinkData {
   static MAGIC_NUMBER = 105
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('windX', 8, false, 4, 'float'),
-    new MavLinkPacketField('windY', 12, false, 4, 'float'),
-    new MavLinkPacketField('windZ', 16, false, 4, 'float'),
-    new MavLinkPacketField('varHoriz', 20, false, 4, 'float'),
-    new MavLinkPacketField('varVert', 24, false, 4, 'float'),
-    new MavLinkPacketField('windAlt', 28, false, 4, 'float'),
-    new MavLinkPacketField('horizAccuracy', 32, false, 4, 'float'),
-    new MavLinkPacketField('vertAccuracy', 36, false, 4, 'float'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('windX', 8, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('windY', 12, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('windZ', 16, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('varHoriz', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('varVert', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('windAlt', 28, false, 4, 'float', 'm'),
+    new MavLinkPacketField('horizAccuracy', 32, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vertAccuracy', 36, false, 4, 'float', 'm'),
   ]
 
   /**
@@ -9839,25 +9870,25 @@ export class GpsInput extends MavLinkData {
   static MAGIC_NUMBER = 151
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('timeWeekMs', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('lat', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 20, false, 4, 'float'),
-    new MavLinkPacketField('hdop', 24, false, 4, 'float'),
-    new MavLinkPacketField('vdop', 28, false, 4, 'float'),
-    new MavLinkPacketField('vn', 32, false, 4, 'float'),
-    new MavLinkPacketField('ve', 36, false, 4, 'float'),
-    new MavLinkPacketField('vd', 40, false, 4, 'float'),
-    new MavLinkPacketField('speedAccuracy', 44, false, 4, 'float'),
-    new MavLinkPacketField('horizAccuracy', 48, false, 4, 'float'),
-    new MavLinkPacketField('vertAccuracy', 52, false, 4, 'float'),
-    new MavLinkPacketField('ignoreFlags', 56, false, 2, 'uint16_t'),
-    new MavLinkPacketField('timeWeek', 58, false, 2, 'uint16_t'),
-    new MavLinkPacketField('gpsId', 60, false, 1, 'uint8_t'),
-    new MavLinkPacketField('fixType', 61, false, 1, 'uint8_t'),
-    new MavLinkPacketField('satellitesVisible', 62, false, 1, 'uint8_t'),
-    new MavLinkPacketField('yaw', 63, true, 2, 'uint16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('timeWeekMs', 8, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('lat', 12, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 16, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 20, false, 4, 'float', 'm'),
+    new MavLinkPacketField('hdop', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('vdop', 28, false, 4, 'float', ''),
+    new MavLinkPacketField('vn', 32, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('ve', 36, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vd', 40, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('speedAccuracy', 44, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('horizAccuracy', 48, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vertAccuracy', 52, false, 4, 'float', 'm'),
+    new MavLinkPacketField('ignoreFlags', 56, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('timeWeek', 58, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('gpsId', 60, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('fixType', 61, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('satellitesVisible', 62, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('yaw', 63, true, 2, 'uint16_t', 'cdeg'),
   ]
 
   /**
@@ -9949,9 +9980,9 @@ export class GpsRtcmData extends MavLinkData {
   static MAGIC_NUMBER = 35
 
   static FIELDS = [
-    new MavLinkPacketField('flags', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('len', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('data', 2, false, 1, 'uint8_t[]', 180),
+    new MavLinkPacketField('flags', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('len', 1, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('data', 2, false, 1, 'uint8_t[]', '', 180),
   ]
 
   /**
@@ -9987,30 +10018,30 @@ export class HighLatency extends MavLinkData {
   static MAGIC_NUMBER = 150
 
   static FIELDS = [
-    new MavLinkPacketField('customMode', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('latitude', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('longitude', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('roll', 12, false, 2, 'int16_t'),
-    new MavLinkPacketField('pitch', 14, false, 2, 'int16_t'),
-    new MavLinkPacketField('heading', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('headingSp', 18, false, 2, 'int16_t'),
-    new MavLinkPacketField('altitudeAmsl', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('altitudeSp', 22, false, 2, 'int16_t'),
-    new MavLinkPacketField('wpDistance', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('baseMode', 26, false, 1, 'uint8_t'),
-    new MavLinkPacketField('landedState', 27, false, 1, 'uint8_t'),
-    new MavLinkPacketField('throttle', 28, false, 1, 'int8_t'),
-    new MavLinkPacketField('airspeed', 29, false, 1, 'uint8_t'),
-    new MavLinkPacketField('airspeedSp', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('groundspeed', 31, false, 1, 'uint8_t'),
-    new MavLinkPacketField('climbRate', 32, false, 1, 'int8_t'),
-    new MavLinkPacketField('gpsNsat', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('gpsFixType', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('batteryRemaining', 35, false, 1, 'uint8_t'),
-    new MavLinkPacketField('temperature', 36, false, 1, 'int8_t'),
-    new MavLinkPacketField('temperatureAir', 37, false, 1, 'int8_t'),
-    new MavLinkPacketField('failsafe', 38, false, 1, 'uint8_t'),
-    new MavLinkPacketField('wpNum', 39, false, 1, 'uint8_t'),
+    new MavLinkPacketField('customMode', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('latitude', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('longitude', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('roll', 12, false, 2, 'int16_t', 'cdeg'),
+    new MavLinkPacketField('pitch', 14, false, 2, 'int16_t', 'cdeg'),
+    new MavLinkPacketField('heading', 16, false, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('headingSp', 18, false, 2, 'int16_t', 'cdeg'),
+    new MavLinkPacketField('altitudeAmsl', 20, false, 2, 'int16_t', 'm'),
+    new MavLinkPacketField('altitudeSp', 22, false, 2, 'int16_t', 'm'),
+    new MavLinkPacketField('wpDistance', 24, false, 2, 'uint16_t', 'm'),
+    new MavLinkPacketField('baseMode', 26, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('landedState', 27, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('throttle', 28, false, 1, 'int8_t', '%'),
+    new MavLinkPacketField('airspeed', 29, false, 1, 'uint8_t', 'm/s'),
+    new MavLinkPacketField('airspeedSp', 30, false, 1, 'uint8_t', 'm/s'),
+    new MavLinkPacketField('groundspeed', 31, false, 1, 'uint8_t', 'm/s'),
+    new MavLinkPacketField('climbRate', 32, false, 1, 'int8_t', 'm/s'),
+    new MavLinkPacketField('gpsNsat', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('gpsFixType', 34, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('batteryRemaining', 35, false, 1, 'uint8_t', '%'),
+    new MavLinkPacketField('temperature', 36, false, 1, 'int8_t', 'degC'),
+    new MavLinkPacketField('temperatureAir', 37, false, 1, 'int8_t', 'degC'),
+    new MavLinkPacketField('failsafe', 38, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('wpNum', 39, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -10122,33 +10153,33 @@ export class HighLatency2 extends MavLinkData {
   static MAGIC_NUMBER = 179
 
   static FIELDS = [
-    new MavLinkPacketField('timestamp', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('latitude', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('longitude', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('customMode', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('altitude', 14, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetAltitude', 16, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetDistance', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('wpNum', 20, false, 2, 'uint16_t'),
-    new MavLinkPacketField('failureFlags', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('type', 24, false, 1, 'uint8_t'),
-    new MavLinkPacketField('autopilot', 25, false, 1, 'uint8_t'),
-    new MavLinkPacketField('heading', 26, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetHeading', 27, false, 1, 'uint8_t'),
-    new MavLinkPacketField('throttle', 28, false, 1, 'uint8_t'),
-    new MavLinkPacketField('airspeed', 29, false, 1, 'uint8_t'),
-    new MavLinkPacketField('airspeedSp', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('groundspeed', 31, false, 1, 'uint8_t'),
-    new MavLinkPacketField('windspeed', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('windHeading', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('eph', 34, false, 1, 'uint8_t'),
-    new MavLinkPacketField('epv', 35, false, 1, 'uint8_t'),
-    new MavLinkPacketField('temperatureAir', 36, false, 1, 'int8_t'),
-    new MavLinkPacketField('climbRate', 37, false, 1, 'int8_t'),
-    new MavLinkPacketField('battery', 38, false, 1, 'int8_t'),
-    new MavLinkPacketField('custom0', 39, false, 1, 'int8_t'),
-    new MavLinkPacketField('custom1', 40, false, 1, 'int8_t'),
-    new MavLinkPacketField('custom2', 41, false, 1, 'int8_t'),
+    new MavLinkPacketField('timestamp', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('latitude', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('longitude', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('customMode', 12, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('altitude', 14, false, 2, 'int16_t', 'm'),
+    new MavLinkPacketField('targetAltitude', 16, false, 2, 'int16_t', 'm'),
+    new MavLinkPacketField('targetDistance', 18, false, 2, 'uint16_t', 'dam'),
+    new MavLinkPacketField('wpNum', 20, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('failureFlags', 22, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('type', 24, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('autopilot', 25, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('heading', 26, false, 1, 'uint8_t', 'deg/2'),
+    new MavLinkPacketField('targetHeading', 27, false, 1, 'uint8_t', 'deg/2'),
+    new MavLinkPacketField('throttle', 28, false, 1, 'uint8_t', '%'),
+    new MavLinkPacketField('airspeed', 29, false, 1, 'uint8_t', 'm/s*5'),
+    new MavLinkPacketField('airspeedSp', 30, false, 1, 'uint8_t', 'm/s*5'),
+    new MavLinkPacketField('groundspeed', 31, false, 1, 'uint8_t', 'm/s*5'),
+    new MavLinkPacketField('windspeed', 32, false, 1, 'uint8_t', 'm/s*5'),
+    new MavLinkPacketField('windHeading', 33, false, 1, 'uint8_t', 'deg/2'),
+    new MavLinkPacketField('eph', 34, false, 1, 'uint8_t', 'dm'),
+    new MavLinkPacketField('epv', 35, false, 1, 'uint8_t', 'dm'),
+    new MavLinkPacketField('temperatureAir', 36, false, 1, 'int8_t', 'degC'),
+    new MavLinkPacketField('climbRate', 37, false, 1, 'int8_t', 'dm/s'),
+    new MavLinkPacketField('battery', 38, false, 1, 'int8_t', '%'),
+    new MavLinkPacketField('custom0', 39, false, 1, 'int8_t', ''),
+    new MavLinkPacketField('custom1', 40, false, 1, 'int8_t', ''),
+    new MavLinkPacketField('custom2', 41, false, 1, 'int8_t', ''),
   ]
 
   /**
@@ -10271,13 +10302,13 @@ export class Vibration extends MavLinkData {
   static MAGIC_NUMBER = 90
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('vibrationX', 8, false, 4, 'float'),
-    new MavLinkPacketField('vibrationY', 12, false, 4, 'float'),
-    new MavLinkPacketField('vibrationZ', 16, false, 4, 'float'),
-    new MavLinkPacketField('clipping0', 20, false, 4, 'uint32_t'),
-    new MavLinkPacketField('clipping1', 24, false, 4, 'uint32_t'),
-    new MavLinkPacketField('clipping2', 28, false, 4, 'uint32_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('vibrationX', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('vibrationY', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('vibrationZ', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('clipping0', 20, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('clipping1', 24, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('clipping2', 28, false, 4, 'uint32_t', ''),
   ]
 
   /**
@@ -10328,17 +10359,17 @@ export class HomePosition extends MavLinkData {
   static MAGIC_NUMBER = 104
 
   static FIELDS = [
-    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('altitude', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('x', 12, false, 4, 'float'),
-    new MavLinkPacketField('y', 16, false, 4, 'float'),
-    new MavLinkPacketField('z', 20, false, 4, 'float'),
-    new MavLinkPacketField('q', 24, false, 4, 'float[]', 4),
-    new MavLinkPacketField('approachX', 40, false, 4, 'float'),
-    new MavLinkPacketField('approachY', 44, false, 4, 'float'),
-    new MavLinkPacketField('approachZ', 48, false, 4, 'float'),
-    new MavLinkPacketField('timeUsec', 52, true, 8, 'uint64_t'),
+    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('altitude', 8, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('x', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 20, false, 4, 'float', 'm'),
+    new MavLinkPacketField('q', 24, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('approachX', 40, false, 4, 'float', 'm'),
+    new MavLinkPacketField('approachY', 44, false, 4, 'float', 'm'),
+    new MavLinkPacketField('approachZ', 48, false, 4, 'float', 'm'),
+    new MavLinkPacketField('timeUsec', 52, true, 8, 'uint64_t', 'us'),
   ]
 
   /**
@@ -10414,18 +10445,18 @@ export class SetHomePosition extends MavLinkData {
   static MAGIC_NUMBER = 85
 
   static FIELDS = [
-    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('altitude', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('x', 12, false, 4, 'float'),
-    new MavLinkPacketField('y', 16, false, 4, 'float'),
-    new MavLinkPacketField('z', 20, false, 4, 'float'),
-    new MavLinkPacketField('q', 24, false, 4, 'float[]', 4),
-    new MavLinkPacketField('approachX', 40, false, 4, 'float'),
-    new MavLinkPacketField('approachY', 44, false, 4, 'float'),
-    new MavLinkPacketField('approachZ', 48, false, 4, 'float'),
-    new MavLinkPacketField('targetSystem', 52, false, 1, 'uint8_t'),
-    new MavLinkPacketField('timeUsec', 53, true, 8, 'uint64_t'),
+    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('altitude', 8, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('x', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 20, false, 4, 'float', 'm'),
+    new MavLinkPacketField('q', 24, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('approachX', 40, false, 4, 'float', 'm'),
+    new MavLinkPacketField('approachY', 44, false, 4, 'float', 'm'),
+    new MavLinkPacketField('approachZ', 48, false, 4, 'float', 'm'),
+    new MavLinkPacketField('targetSystem', 52, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('timeUsec', 53, true, 8, 'uint64_t', 'us'),
   ]
 
   /**
@@ -10500,8 +10531,8 @@ export class MessageInterval extends MavLinkData {
   static MAGIC_NUMBER = 95
 
   static FIELDS = [
-    new MavLinkPacketField('intervalUs', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('messageId', 4, false, 2, 'uint16_t'),
+    new MavLinkPacketField('intervalUs', 0, false, 4, 'int32_t', 'us'),
+    new MavLinkPacketField('messageId', 4, false, 2, 'uint16_t', ''),
   ]
 
   /**
@@ -10525,8 +10556,8 @@ export class ExtendedSysState extends MavLinkData {
   static MAGIC_NUMBER = 130
 
   static FIELDS = [
-    new MavLinkPacketField('vtolState', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('landedState', 1, false, 1, 'uint8_t'),
+    new MavLinkPacketField('vtolState', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('landedState', 1, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -10550,19 +10581,19 @@ export class AdsbVehicle extends MavLinkData {
   static MAGIC_NUMBER = 184
 
   static FIELDS = [
-    new MavLinkPacketField('ICAOAddress', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('lat', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('altitude', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('heading', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('horVelocity', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('verVelocity', 20, false, 2, 'int16_t'),
-    new MavLinkPacketField('flags', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('squawk', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('altitudeType', 26, false, 1, 'uint8_t'),
-    new MavLinkPacketField('callsign', 27, false, 1, 'char[]', 9),
-    new MavLinkPacketField('emitterType', 36, false, 1, 'uint8_t'),
-    new MavLinkPacketField('tslc', 37, false, 1, 'uint8_t'),
+    new MavLinkPacketField('ICAOAddress', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('lat', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('altitude', 12, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('heading', 16, false, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('horVelocity', 18, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('verVelocity', 20, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('flags', 22, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('squawk', 24, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('altitudeType', 26, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('callsign', 27, false, 1, 'char[]', '', 9),
+    new MavLinkPacketField('emitterType', 36, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('tslc', 37, false, 1, 'uint8_t', 's'),
   ]
 
   /**
@@ -10629,13 +10660,13 @@ export class Collision extends MavLinkData {
   static MAGIC_NUMBER = 81
 
   static FIELDS = [
-    new MavLinkPacketField('id', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('timeToMinimumDelta', 4, false, 4, 'float'),
-    new MavLinkPacketField('altitudeMinimumDelta', 8, false, 4, 'float'),
-    new MavLinkPacketField('horizontalMinimumDelta', 12, false, 4, 'float'),
-    new MavLinkPacketField('src', 16, false, 1, 'uint8_t'),
-    new MavLinkPacketField('action', 17, false, 1, 'uint8_t'),
-    new MavLinkPacketField('threatLevel', 18, false, 1, 'uint8_t'),
+    new MavLinkPacketField('id', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('timeToMinimumDelta', 4, false, 4, 'float', 's'),
+    new MavLinkPacketField('altitudeMinimumDelta', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('horizontalMinimumDelta', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('src', 16, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('action', 17, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('threatLevel', 18, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -10678,11 +10709,11 @@ export class V2Extension extends MavLinkData {
   static MAGIC_NUMBER = 8
 
   static FIELDS = [
-    new MavLinkPacketField('messageType', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetNetwork', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetSystem', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('payload', 5, false, 1, 'uint8_t[]', 249),
+    new MavLinkPacketField('messageType', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetNetwork', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetSystem', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('payload', 5, false, 1, 'uint8_t[]', '', 249),
   ]
 
   /**
@@ -10729,10 +10760,10 @@ export class MemoryVect extends MavLinkData {
   static MAGIC_NUMBER = 204
 
   static FIELDS = [
-    new MavLinkPacketField('address', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('ver', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('value', 4, false, 1, 'int8_t[]', 32),
+    new MavLinkPacketField('address', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('ver', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('value', 4, false, 1, 'int8_t[]', '', 32),
   ]
 
   /**
@@ -10764,11 +10795,11 @@ export class DebugVect extends MavLinkData {
   static MAGIC_NUMBER = 49
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('x', 8, false, 4, 'float'),
-    new MavLinkPacketField('y', 12, false, 4, 'float'),
-    new MavLinkPacketField('z', 16, false, 4, 'float'),
-    new MavLinkPacketField('name', 20, false, 1, 'char[]', 10),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('x', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('y', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('z', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('name', 20, false, 1, 'char[]', '', 10),
   ]
 
   /**
@@ -10805,9 +10836,9 @@ export class NamedValueFloat extends MavLinkData {
   static MAGIC_NUMBER = 170
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('value', 4, false, 4, 'float'),
-    new MavLinkPacketField('name', 8, false, 1, 'char[]', 10),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('value', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('name', 8, false, 1, 'char[]', '', 10),
   ]
 
   /**
@@ -10835,9 +10866,9 @@ export class NamedValueInt extends MavLinkData {
   static MAGIC_NUMBER = 44
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('value', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('name', 8, false, 1, 'char[]', 10),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('value', 4, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('name', 8, false, 1, 'char[]', '', 10),
   ]
 
   /**
@@ -10867,10 +10898,10 @@ export class StatusText extends MavLinkData {
   static MAGIC_NUMBER = 83
 
   static FIELDS = [
-    new MavLinkPacketField('severity', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('text', 1, false, 1, 'char[]', 50),
-    new MavLinkPacketField('id', 51, true, 2, 'uint16_t'),
-    new MavLinkPacketField('chunkSeq', 53, true, 1, 'uint8_t'),
+    new MavLinkPacketField('severity', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('text', 1, false, 1, 'char[]', '', 50),
+    new MavLinkPacketField('id', 51, true, 2, 'uint16_t', ''),
+    new MavLinkPacketField('chunkSeq', 53, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -10905,9 +10936,9 @@ export class Debug extends MavLinkData {
   static MAGIC_NUMBER = 46
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('value', 4, false, 4, 'float'),
-    new MavLinkPacketField('ind', 8, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('value', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('ind', 8, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -10935,10 +10966,10 @@ export class SetupSigning extends MavLinkData {
   static MAGIC_NUMBER = 71
 
   static FIELDS = [
-    new MavLinkPacketField('initialTimestamp', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('targetSystem', 8, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 9, false, 1, 'uint8_t'),
-    new MavLinkPacketField('secretKey', 10, false, 1, 'uint8_t[]', 32),
+    new MavLinkPacketField('initialTimestamp', 0, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('targetSystem', 8, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 9, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('secretKey', 10, false, 1, 'uint8_t[]', '', 32),
   ]
 
   /**
@@ -10969,9 +11000,9 @@ export class ButtonChange extends MavLinkData {
   static MAGIC_NUMBER = 131
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('lastChangeMs', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('state', 8, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('lastChangeMs', 4, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('state', 8, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -11000,10 +11031,10 @@ export class PlayTune extends MavLinkData {
   static MAGIC_NUMBER = 187
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('tune', 2, false, 1, 'char[]', 30),
-    new MavLinkPacketField('tune2', 32, true, 1, 'char[]', 200),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('tune', 2, false, 1, 'char[]', '', 30),
+    new MavLinkPacketField('tune2', 32, true, 1, 'char[]', '', 200),
   ]
 
   /**
@@ -11034,19 +11065,19 @@ export class CameraInformation extends MavLinkData {
   static MAGIC_NUMBER = 92
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('firmwareVersion', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('focalLength', 8, false, 4, 'float'),
-    new MavLinkPacketField('sensorSizeH', 12, false, 4, 'float'),
-    new MavLinkPacketField('sensorSizeV', 16, false, 4, 'float'),
-    new MavLinkPacketField('flags', 20, false, 4, 'uint32_t'),
-    new MavLinkPacketField('resolutionH', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('resolutionV', 26, false, 2, 'uint16_t'),
-    new MavLinkPacketField('camDefinitionVersion', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('vendorName', 30, false, 1, 'uint8_t[]', 32),
-    new MavLinkPacketField('modelName', 62, false, 1, 'uint8_t[]', 32),
-    new MavLinkPacketField('lensId', 94, false, 1, 'uint8_t'),
-    new MavLinkPacketField('camDefinitionUri', 95, false, 1, 'char[]', 140),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('firmwareVersion', 4, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('focalLength', 8, false, 4, 'float', 'mm'),
+    new MavLinkPacketField('sensorSizeH', 12, false, 4, 'float', 'mm'),
+    new MavLinkPacketField('sensorSizeV', 16, false, 4, 'float', 'mm'),
+    new MavLinkPacketField('flags', 20, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('resolutionH', 24, false, 2, 'uint16_t', 'pix'),
+    new MavLinkPacketField('resolutionV', 26, false, 2, 'uint16_t', 'pix'),
+    new MavLinkPacketField('camDefinitionVersion', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('vendorName', 30, false, 1, 'uint8_t[]', '', 32),
+    new MavLinkPacketField('modelName', 62, false, 1, 'uint8_t[]', '', 32),
+    new MavLinkPacketField('lensId', 94, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('camDefinitionUri', 95, false, 1, 'char[]', '', 140),
   ]
 
   /**
@@ -11118,10 +11149,10 @@ export class CameraSettings extends MavLinkData {
   static MAGIC_NUMBER = 146
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('modeId', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('zoomLevel', 5, true, 4, 'float'),
-    new MavLinkPacketField('focusLevel', 9, true, 4, 'float'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('modeId', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('zoomLevel', 5, true, 4, 'float', ''),
+    new MavLinkPacketField('focusLevel', 9, true, 4, 'float', ''),
   ]
 
   /**
@@ -11155,18 +11186,18 @@ export class StorageInformation extends MavLinkData {
   static MAGIC_NUMBER = 179
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('totalCapacity', 4, false, 4, 'float'),
-    new MavLinkPacketField('usedCapacity', 8, false, 4, 'float'),
-    new MavLinkPacketField('availableCapacity', 12, false, 4, 'float'),
-    new MavLinkPacketField('readSpeed', 16, false, 4, 'float'),
-    new MavLinkPacketField('writeSpeed', 20, false, 4, 'float'),
-    new MavLinkPacketField('storageId', 24, false, 1, 'uint8_t'),
-    new MavLinkPacketField('storageCount', 25, false, 1, 'uint8_t'),
-    new MavLinkPacketField('status', 26, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 27, true, 1, 'uint8_t'),
-    new MavLinkPacketField('name', 28, true, 1, 'char[]', 32),
-    new MavLinkPacketField('storageUsage', 60, true, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('totalCapacity', 4, false, 4, 'float', 'MiB'),
+    new MavLinkPacketField('usedCapacity', 8, false, 4, 'float', 'MiB'),
+    new MavLinkPacketField('availableCapacity', 12, false, 4, 'float', 'MiB'),
+    new MavLinkPacketField('readSpeed', 16, false, 4, 'float', 'MiB/s'),
+    new MavLinkPacketField('writeSpeed', 20, false, 4, 'float', 'MiB/s'),
+    new MavLinkPacketField('storageId', 24, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('storageCount', 25, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('status', 26, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type', 27, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('name', 28, true, 1, 'char[]', '', 32),
+    new MavLinkPacketField('storageUsage', 60, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -11235,13 +11266,13 @@ export class CameraCaptureStatus extends MavLinkData {
   static MAGIC_NUMBER = 12
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('imageInterval', 4, false, 4, 'float'),
-    new MavLinkPacketField('recordingTimeMs', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('availableCapacity', 12, false, 4, 'float'),
-    new MavLinkPacketField('imageStatus', 16, false, 1, 'uint8_t'),
-    new MavLinkPacketField('videoStatus', 17, false, 1, 'uint8_t'),
-    new MavLinkPacketField('imageCount', 18, true, 4, 'int32_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('imageInterval', 4, false, 4, 'float', 's'),
+    new MavLinkPacketField('recordingTimeMs', 8, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('availableCapacity', 12, false, 4, 'float', 'MiB'),
+    new MavLinkPacketField('imageStatus', 16, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('videoStatus', 17, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('imageCount', 18, true, 4, 'int32_t', ''),
   ]
 
   /**
@@ -11293,17 +11324,17 @@ export class CameraImageCaptured extends MavLinkData {
   static MAGIC_NUMBER = 133
 
   static FIELDS = [
-    new MavLinkPacketField('timeUtc', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('timeBootMs', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('lat', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 20, false, 4, 'int32_t'),
-    new MavLinkPacketField('relativeAlt', 24, false, 4, 'int32_t'),
-    new MavLinkPacketField('q', 28, false, 4, 'float[]', 4),
-    new MavLinkPacketField('imageIndex', 44, false, 4, 'int32_t'),
-    new MavLinkPacketField('cameraId', 48, false, 1, 'uint8_t'),
-    new MavLinkPacketField('captureResult', 49, false, 1, 'int8_t'),
-    new MavLinkPacketField('fileUrl', 50, false, 1, 'char[]', 205),
+    new MavLinkPacketField('timeUtc', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('timeBootMs', 8, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('lat', 12, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 16, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 20, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('relativeAlt', 24, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('q', 28, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('imageIndex', 44, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('cameraId', 48, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('captureResult', 49, false, 1, 'int8_t', ''),
+    new MavLinkPacketField('fileUrl', 50, false, 1, 'char[]', '', 205),
   ]
 
   /**
@@ -11363,10 +11394,10 @@ export class FlightInformation extends MavLinkData {
   static MAGIC_NUMBER = 49
 
   static FIELDS = [
-    new MavLinkPacketField('armingTimeUtc', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('takeoffTimeUtc', 8, false, 8, 'uint64_t'),
-    new MavLinkPacketField('flightUuid', 16, false, 8, 'uint64_t'),
-    new MavLinkPacketField('timeBootMs', 24, false, 4, 'uint32_t'),
+    new MavLinkPacketField('armingTimeUtc', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('takeoffTimeUtc', 8, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('flightUuid', 16, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('timeBootMs', 24, false, 4, 'uint32_t', 'ms'),
   ]
 
   /**
@@ -11399,11 +11430,11 @@ export class MountOrientation extends MavLinkData {
   static MAGIC_NUMBER = 26
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('roll', 4, false, 4, 'float'),
-    new MavLinkPacketField('pitch', 8, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 12, false, 4, 'float'),
-    new MavLinkPacketField('yawAbsolute', 16, true, 4, 'float'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('roll', 4, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('pitch', 8, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('yaw', 12, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('yawAbsolute', 16, true, 4, 'float', 'deg'),
   ]
 
   /**
@@ -11438,12 +11469,12 @@ export class LoggingData extends MavLinkData {
   static MAGIC_NUMBER = 193
 
   static FIELDS = [
-    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('length', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('firstMessageOffset', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('data', 6, false, 1, 'uint8_t[]', 249),
+    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('length', 4, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('firstMessageOffset', 5, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('data', 6, false, 1, 'uint8_t[]', '', 249),
   ]
 
   /**
@@ -11483,12 +11514,12 @@ export class LoggingDataAcked extends MavLinkData {
   static MAGIC_NUMBER = 35
 
   static FIELDS = [
-    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('length', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('firstMessageOffset', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('data', 6, false, 1, 'uint8_t[]', 249),
+    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('length', 4, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('firstMessageOffset', 5, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('data', 6, false, 1, 'uint8_t[]', '', 249),
   ]
 
   /**
@@ -11528,9 +11559,9 @@ export class LoggingAck extends MavLinkData {
   static MAGIC_NUMBER = 14
 
   static FIELDS = [
-    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
+    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -11558,18 +11589,18 @@ export class VideoStreamInformation extends MavLinkData {
   static MAGIC_NUMBER = 109
 
   static FIELDS = [
-    new MavLinkPacketField('framerate', 0, false, 4, 'float'),
-    new MavLinkPacketField('bitrate', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('flags', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('resolutionH', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('resolutionV', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('rotation', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('hfov', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('streamId', 18, false, 1, 'uint8_t'),
-    new MavLinkPacketField('count', 19, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('name', 21, false, 1, 'char[]', 32),
-    new MavLinkPacketField('uri', 53, false, 1, 'char[]', 160),
+    new MavLinkPacketField('framerate', 0, false, 4, 'float', 'Hz'),
+    new MavLinkPacketField('bitrate', 4, false, 4, 'uint32_t', 'bits/s'),
+    new MavLinkPacketField('flags', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('resolutionH', 10, false, 2, 'uint16_t', 'pix'),
+    new MavLinkPacketField('resolutionV', 12, false, 2, 'uint16_t', 'pix'),
+    new MavLinkPacketField('rotation', 14, false, 2, 'uint16_t', 'deg'),
+    new MavLinkPacketField('hfov', 16, false, 2, 'uint16_t', 'deg'),
+    new MavLinkPacketField('streamId', 18, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('count', 19, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('name', 21, false, 1, 'char[]', '', 32),
+    new MavLinkPacketField('uri', 53, false, 1, 'char[]', '', 160),
   ]
 
   /**
@@ -11633,14 +11664,14 @@ export class VideoStreamStatus extends MavLinkData {
   static MAGIC_NUMBER = 59
 
   static FIELDS = [
-    new MavLinkPacketField('framerate', 0, false, 4, 'float'),
-    new MavLinkPacketField('bitrate', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('flags', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('resolutionH', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('resolutionV', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('rotation', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('hfov', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('streamId', 18, false, 1, 'uint8_t'),
+    new MavLinkPacketField('framerate', 0, false, 4, 'float', 'Hz'),
+    new MavLinkPacketField('bitrate', 4, false, 4, 'uint32_t', 'bits/s'),
+    new MavLinkPacketField('flags', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('resolutionH', 10, false, 2, 'uint16_t', 'pix'),
+    new MavLinkPacketField('resolutionV', 12, false, 2, 'uint16_t', 'pix'),
+    new MavLinkPacketField('rotation', 14, false, 2, 'uint16_t', 'deg'),
+    new MavLinkPacketField('hfov', 16, false, 2, 'uint16_t', 'deg'),
+    new MavLinkPacketField('streamId', 18, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -11688,16 +11719,16 @@ export class CameraFovStatus extends MavLinkData {
   static MAGIC_NUMBER = 22
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('latCamera', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('lonCamera', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('altCamera', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('latImage', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('lonImage', 20, false, 4, 'int32_t'),
-    new MavLinkPacketField('altImage', 24, false, 4, 'int32_t'),
-    new MavLinkPacketField('q', 28, false, 4, 'float[]', 4),
-    new MavLinkPacketField('hfov', 44, false, 4, 'float'),
-    new MavLinkPacketField('vfov', 48, false, 4, 'float'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('latCamera', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lonCamera', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('altCamera', 12, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('latImage', 16, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lonImage', 20, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('altImage', 24, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('q', 28, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('hfov', 44, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('vfov', 48, false, 4, 'float', 'deg'),
   ]
 
   /**
@@ -11756,16 +11787,16 @@ export class CameraTrackingImageStatus extends MavLinkData {
   static MAGIC_NUMBER = 126
 
   static FIELDS = [
-    new MavLinkPacketField('pointX', 0, false, 4, 'float'),
-    new MavLinkPacketField('pointY', 4, false, 4, 'float'),
-    new MavLinkPacketField('radius', 8, false, 4, 'float'),
-    new MavLinkPacketField('recTopX', 12, false, 4, 'float'),
-    new MavLinkPacketField('recTopY', 16, false, 4, 'float'),
-    new MavLinkPacketField('recBottomX', 20, false, 4, 'float'),
-    new MavLinkPacketField('recBottomY', 24, false, 4, 'float'),
-    new MavLinkPacketField('trackingStatus', 28, false, 1, 'uint8_t'),
-    new MavLinkPacketField('trackingMode', 29, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetData', 30, false, 1, 'uint8_t'),
+    new MavLinkPacketField('pointX', 0, false, 4, 'float', ''),
+    new MavLinkPacketField('pointY', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('radius', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('recTopX', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('recTopY', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('recBottomX', 20, false, 4, 'float', ''),
+    new MavLinkPacketField('recBottomY', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('trackingStatus', 28, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('trackingMode', 29, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetData', 30, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -11828,19 +11859,19 @@ export class CameraTrackingGeoStatus extends MavLinkData {
   static MAGIC_NUMBER = 18
 
   static FIELDS = [
-    new MavLinkPacketField('lat', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 8, false, 4, 'float'),
-    new MavLinkPacketField('hAcc', 12, false, 4, 'float'),
-    new MavLinkPacketField('vAcc', 16, false, 4, 'float'),
-    new MavLinkPacketField('velN', 20, false, 4, 'float'),
-    new MavLinkPacketField('velE', 24, false, 4, 'float'),
-    new MavLinkPacketField('velD', 28, false, 4, 'float'),
-    new MavLinkPacketField('velAcc', 32, false, 4, 'float'),
-    new MavLinkPacketField('dist', 36, false, 4, 'float'),
-    new MavLinkPacketField('hdg', 40, false, 4, 'float'),
-    new MavLinkPacketField('hdgAcc', 44, false, 4, 'float'),
-    new MavLinkPacketField('trackingStatus', 48, false, 1, 'uint8_t'),
+    new MavLinkPacketField('lat', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('hAcc', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('vAcc', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('velN', 20, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('velE', 24, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('velD', 28, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('velAcc', 32, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('dist', 36, false, 4, 'float', 'm'),
+    new MavLinkPacketField('hdg', 40, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('hdgAcc', 44, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('trackingStatus', 48, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -11908,15 +11939,15 @@ export class GimbalManagerInformation extends MavLinkData {
   static MAGIC_NUMBER = 70
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('capFlags', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('rollMin', 8, false, 4, 'float'),
-    new MavLinkPacketField('rollMax', 12, false, 4, 'float'),
-    new MavLinkPacketField('pitchMin', 16, false, 4, 'float'),
-    new MavLinkPacketField('pitchMax', 20, false, 4, 'float'),
-    new MavLinkPacketField('yawMin', 24, false, 4, 'float'),
-    new MavLinkPacketField('yawMax', 28, false, 4, 'float'),
-    new MavLinkPacketField('gimbalDeviceId', 32, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('capFlags', 4, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('rollMin', 8, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('rollMax', 12, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitchMin', 16, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitchMax', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yawMin', 24, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yawMax', 28, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('gimbalDeviceId', 32, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -11968,13 +11999,13 @@ export class GimbalManagerStatus extends MavLinkData {
   static MAGIC_NUMBER = 48
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('flags', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('gimbalDeviceId', 8, false, 1, 'uint8_t'),
-    new MavLinkPacketField('primaryControlSysid', 9, false, 1, 'uint8_t'),
-    new MavLinkPacketField('primaryControlCompid', 10, false, 1, 'uint8_t'),
-    new MavLinkPacketField('secondaryControlSysid', 11, false, 1, 'uint8_t'),
-    new MavLinkPacketField('secondaryControlCompid', 12, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('flags', 4, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('gimbalDeviceId', 8, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('primaryControlSysid', 9, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('primaryControlCompid', 10, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('secondaryControlSysid', 11, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('secondaryControlCompid', 12, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12018,14 +12049,14 @@ export class GimbalManagerSetAttitude extends MavLinkData {
   static MAGIC_NUMBER = 123
 
   static FIELDS = [
-    new MavLinkPacketField('flags', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('q', 4, false, 4, 'float[]', 4),
-    new MavLinkPacketField('angularVelocityX', 20, false, 4, 'float'),
-    new MavLinkPacketField('angularVelocityY', 24, false, 4, 'float'),
-    new MavLinkPacketField('angularVelocityZ', 28, false, 4, 'float'),
-    new MavLinkPacketField('targetSystem', 32, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 33, false, 1, 'uint8_t'),
-    new MavLinkPacketField('gimbalDeviceId', 34, false, 1, 'uint8_t'),
+    new MavLinkPacketField('flags', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('q', 4, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('angularVelocityX', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('angularVelocityY', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('angularVelocityZ', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('targetSystem', 32, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 33, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('gimbalDeviceId', 34, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12077,21 +12108,21 @@ export class GimbalDeviceInformation extends MavLinkData {
   static MAGIC_NUMBER = 74
 
   static FIELDS = [
-    new MavLinkPacketField('uid', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('timeBootMs', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('firmwareVersion', 12, false, 4, 'uint32_t'),
-    new MavLinkPacketField('hardwareVersion', 16, false, 4, 'uint32_t'),
-    new MavLinkPacketField('rollMin', 20, false, 4, 'float'),
-    new MavLinkPacketField('rollMax', 24, false, 4, 'float'),
-    new MavLinkPacketField('pitchMin', 28, false, 4, 'float'),
-    new MavLinkPacketField('pitchMax', 32, false, 4, 'float'),
-    new MavLinkPacketField('yawMin', 36, false, 4, 'float'),
-    new MavLinkPacketField('yawMax', 40, false, 4, 'float'),
-    new MavLinkPacketField('capFlags', 44, false, 2, 'uint16_t'),
-    new MavLinkPacketField('customCapFlags', 46, false, 2, 'uint16_t'),
-    new MavLinkPacketField('vendorName', 48, false, 1, 'char[]', 32),
-    new MavLinkPacketField('modelName', 80, false, 1, 'char[]', 32),
-    new MavLinkPacketField('customName', 112, false, 1, 'char[]', 32),
+    new MavLinkPacketField('uid', 0, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('timeBootMs', 8, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('firmwareVersion', 12, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('hardwareVersion', 16, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('rollMin', 20, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('rollMax', 24, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitchMin', 28, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitchMax', 32, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yawMin', 36, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yawMax', 40, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('capFlags', 44, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('customCapFlags', 46, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('vendorName', 48, false, 1, 'char[]', '', 32),
+    new MavLinkPacketField('modelName', 80, false, 1, 'char[]', '', 32),
+    new MavLinkPacketField('customName', 112, false, 1, 'char[]', '', 32),
   ]
 
   /**
@@ -12169,13 +12200,13 @@ export class GimbalDeviceSetAttitude extends MavLinkData {
   static MAGIC_NUMBER = 99
 
   static FIELDS = [
-    new MavLinkPacketField('q', 0, false, 4, 'float[]', 4),
-    new MavLinkPacketField('angularVelocityX', 16, false, 4, 'float'),
-    new MavLinkPacketField('angularVelocityY', 20, false, 4, 'float'),
-    new MavLinkPacketField('angularVelocityZ', 24, false, 4, 'float'),
-    new MavLinkPacketField('flags', 28, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 31, false, 1, 'uint8_t'),
+    new MavLinkPacketField('q', 0, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('angularVelocityX', 16, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('angularVelocityY', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('angularVelocityZ', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('flags', 28, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 30, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 31, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12224,15 +12255,15 @@ export class GimbalDeviceAttitudeStatus extends MavLinkData {
   static MAGIC_NUMBER = 137
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('q', 4, false, 4, 'float[]', 4),
-    new MavLinkPacketField('angularVelocityX', 20, false, 4, 'float'),
-    new MavLinkPacketField('angularVelocityY', 24, false, 4, 'float'),
-    new MavLinkPacketField('angularVelocityZ', 28, false, 4, 'float'),
-    new MavLinkPacketField('failureFlags', 32, false, 4, 'uint32_t'),
-    new MavLinkPacketField('flags', 36, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 38, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 39, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('q', 4, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('angularVelocityX', 20, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('angularVelocityY', 24, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('angularVelocityZ', 28, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('failureFlags', 32, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('flags', 36, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 38, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 39, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12287,18 +12318,18 @@ export class AutopilotStateForGimbalDevice extends MavLinkData {
   static MAGIC_NUMBER = 210
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootUs', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('q', 8, false, 4, 'float[]', 4),
-    new MavLinkPacketField('qEstimatedDelayUs', 24, false, 4, 'uint32_t'),
-    new MavLinkPacketField('vx', 28, false, 4, 'float'),
-    new MavLinkPacketField('vy', 32, false, 4, 'float'),
-    new MavLinkPacketField('vz', 36, false, 4, 'float'),
-    new MavLinkPacketField('vEstimatedDelayUs', 40, false, 4, 'uint32_t'),
-    new MavLinkPacketField('feedForwardAngularVelocityZ', 44, false, 4, 'float'),
-    new MavLinkPacketField('estimatorStatus', 48, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 50, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 51, false, 1, 'uint8_t'),
-    new MavLinkPacketField('landedState', 52, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeBootUs', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('q', 8, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('qEstimatedDelayUs', 24, false, 4, 'uint32_t', 'us'),
+    new MavLinkPacketField('vx', 28, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 32, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 36, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vEstimatedDelayUs', 40, false, 4, 'uint32_t', 'us'),
+    new MavLinkPacketField('feedForwardAngularVelocityZ', 44, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('estimatorStatus', 48, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 50, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 51, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('landedState', 52, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12365,14 +12396,14 @@ export class GimbalManagerSetPitchyaw extends MavLinkData {
   static MAGIC_NUMBER = 1
 
   static FIELDS = [
-    new MavLinkPacketField('flags', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('pitch', 4, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 8, false, 4, 'float'),
-    new MavLinkPacketField('pitchRate', 12, false, 4, 'float'),
-    new MavLinkPacketField('yawRate', 16, false, 4, 'float'),
-    new MavLinkPacketField('targetSystem', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 21, false, 1, 'uint8_t'),
-    new MavLinkPacketField('gimbalDeviceId', 22, false, 1, 'uint8_t'),
+    new MavLinkPacketField('flags', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('pitch', 4, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('yaw', 8, false, 4, 'float', 'rad'),
+    new MavLinkPacketField('pitchRate', 12, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yawRate', 16, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('targetSystem', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 21, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('gimbalDeviceId', 22, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12423,14 +12454,14 @@ export class GimbalManagerSetManualControl extends MavLinkData {
   static MAGIC_NUMBER = 20
 
   static FIELDS = [
-    new MavLinkPacketField('flags', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('pitch', 4, false, 4, 'float'),
-    new MavLinkPacketField('yaw', 8, false, 4, 'float'),
-    new MavLinkPacketField('pitchRate', 12, false, 4, 'float'),
-    new MavLinkPacketField('yawRate', 16, false, 4, 'float'),
-    new MavLinkPacketField('targetSystem', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 21, false, 1, 'uint8_t'),
-    new MavLinkPacketField('gimbalDeviceId', 22, false, 1, 'uint8_t'),
+    new MavLinkPacketField('flags', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('pitch', 4, false, 4, 'float', ''),
+    new MavLinkPacketField('yaw', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('pitchRate', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('yawRate', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('targetSystem', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 21, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('gimbalDeviceId', 22, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12479,15 +12510,15 @@ export class EscInfo extends MavLinkData {
   static MAGIC_NUMBER = 251
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('errorCount', 8, false, 4, 'uint32_t[]', 4),
-    new MavLinkPacketField('counter', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('failureFlags', 26, false, 2, 'uint16_t[]', 4),
-    new MavLinkPacketField('temperature', 34, false, 2, 'int16_t[]', 4),
-    new MavLinkPacketField('index', 42, false, 1, 'uint8_t'),
-    new MavLinkPacketField('count', 43, false, 1, 'uint8_t'),
-    new MavLinkPacketField('connectionType', 44, false, 1, 'uint8_t'),
-    new MavLinkPacketField('info', 45, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('errorCount', 8, false, 4, 'uint32_t[]', '', 4),
+    new MavLinkPacketField('counter', 24, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('failureFlags', 26, false, 2, 'uint16_t[]', '', 4),
+    new MavLinkPacketField('temperature', 34, false, 2, 'int16_t[]', 'cdegC', 4),
+    new MavLinkPacketField('index', 42, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('count', 43, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('connectionType', 44, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('info', 45, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12542,11 +12573,11 @@ export class EscStatus extends MavLinkData {
   static MAGIC_NUMBER = 10
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('rpm', 8, false, 4, 'int32_t[]', 4),
-    new MavLinkPacketField('voltage', 24, false, 4, 'float[]', 4),
-    new MavLinkPacketField('current', 40, false, 4, 'float[]', 4),
-    new MavLinkPacketField('index', 56, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('rpm', 8, false, 4, 'int32_t[]', 'rpm', 4),
+    new MavLinkPacketField('voltage', 24, false, 4, 'float[]', 'V', 4),
+    new MavLinkPacketField('current', 40, false, 4, 'float[]', 'A', 4),
+    new MavLinkPacketField('index', 56, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12583,10 +12614,10 @@ export class WifiConfigAp extends MavLinkData {
   static MAGIC_NUMBER = 19
 
   static FIELDS = [
-    new MavLinkPacketField('ssid', 0, false, 1, 'char[]', 32),
-    new MavLinkPacketField('password', 32, false, 1, 'char[]', 64),
-    new MavLinkPacketField('mode', 96, true, 1, 'int8_t'),
-    new MavLinkPacketField('response', 97, true, 1, 'int8_t'),
+    new MavLinkPacketField('ssid', 0, false, 1, 'char[]', '', 32),
+    new MavLinkPacketField('password', 32, false, 1, 'char[]', '', 64),
+    new MavLinkPacketField('mode', 96, true, 1, 'int8_t', ''),
+    new MavLinkPacketField('response', 97, true, 1, 'int8_t', ''),
   ]
 
   /**
@@ -12618,23 +12649,23 @@ export class AisVessel extends MavLinkData {
   static MAGIC_NUMBER = 243
 
   static FIELDS = [
-    new MavLinkPacketField('MMSI', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('lat', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('COG', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('heading', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('velocity', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('dimensionBow', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('dimensionStern', 20, false, 2, 'uint16_t'),
-    new MavLinkPacketField('tslc', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('flags', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('turnRate', 26, false, 1, 'int8_t'),
-    new MavLinkPacketField('navigationalStatus', 27, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 28, false, 1, 'uint8_t'),
-    new MavLinkPacketField('dimensionPort', 29, false, 1, 'uint8_t'),
-    new MavLinkPacketField('dimensionStarboard', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('callsign', 31, false, 1, 'char[]', 7),
-    new MavLinkPacketField('name', 38, false, 1, 'char[]', 20),
+    new MavLinkPacketField('MMSI', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('lat', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('COG', 12, false, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('heading', 14, false, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('velocity', 16, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('dimensionBow', 18, false, 2, 'uint16_t', 'm'),
+    new MavLinkPacketField('dimensionStern', 20, false, 2, 'uint16_t', 'm'),
+    new MavLinkPacketField('tslc', 22, false, 2, 'uint16_t', 's'),
+    new MavLinkPacketField('flags', 24, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('turnRate', 26, false, 1, 'int8_t', 'cdeg/s'),
+    new MavLinkPacketField('navigationalStatus', 27, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type', 28, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('dimensionPort', 29, false, 1, 'uint8_t', 'm'),
+    new MavLinkPacketField('dimensionStarboard', 30, false, 1, 'uint8_t', 'm'),
+    new MavLinkPacketField('callsign', 31, false, 1, 'char[]', '', 7),
+    new MavLinkPacketField('name', 38, false, 1, 'char[]', '', 20),
   ]
 
   /**
@@ -12719,12 +12750,12 @@ export class UavcanNodeStatus extends MavLinkData {
   static MAGIC_NUMBER = 28
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('uptimeSec', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('vendorSpecificStatusCode', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('health', 14, false, 1, 'uint8_t'),
-    new MavLinkPacketField('mode', 15, false, 1, 'uint8_t'),
-    new MavLinkPacketField('subMode', 16, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('uptimeSec', 8, false, 4, 'uint32_t', 's'),
+    new MavLinkPacketField('vendorSpecificStatusCode', 12, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('health', 14, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('mode', 15, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('subMode', 16, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12769,15 +12800,15 @@ export class UavcanNodeInfo extends MavLinkData {
   static MAGIC_NUMBER = 95
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('uptimeSec', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('swVcsCommit', 12, false, 4, 'uint32_t'),
-    new MavLinkPacketField('name', 16, false, 1, 'char[]', 80),
-    new MavLinkPacketField('hwVersionMajor', 96, false, 1, 'uint8_t'),
-    new MavLinkPacketField('hwVersionMinor', 97, false, 1, 'uint8_t'),
-    new MavLinkPacketField('hwUniqueId', 98, false, 1, 'uint8_t[]', 16),
-    new MavLinkPacketField('swVersionMajor', 114, false, 1, 'uint8_t'),
-    new MavLinkPacketField('swVersionMinor', 115, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('uptimeSec', 8, false, 4, 'uint32_t', 's'),
+    new MavLinkPacketField('swVcsCommit', 12, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('name', 16, false, 1, 'char[]', '', 80),
+    new MavLinkPacketField('hwVersionMajor', 96, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('hwVersionMinor', 97, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('hwUniqueId', 98, false, 1, 'uint8_t[]', '', 16),
+    new MavLinkPacketField('swVersionMajor', 114, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('swVersionMinor', 115, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12830,10 +12861,10 @@ export class ParamExtRequestRead extends MavLinkData {
   static MAGIC_NUMBER = 243
 
   static FIELDS = [
-    new MavLinkPacketField('paramIndex', 0, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('paramId', 4, false, 1, 'char[]', 16),
+    new MavLinkPacketField('paramIndex', 0, false, 2, 'int16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('paramId', 4, false, 1, 'char[]', '', 16),
   ]
 
   /**
@@ -12868,8 +12899,8 @@ export class ParamExtRequestList extends MavLinkData {
   static MAGIC_NUMBER = 88
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12894,11 +12925,11 @@ export class ParamExtValue extends MavLinkData {
   static MAGIC_NUMBER = 243
 
   static FIELDS = [
-    new MavLinkPacketField('paramCount', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('paramIndex', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('paramId', 4, false, 1, 'char[]', 16),
-    new MavLinkPacketField('paramValue', 20, false, 1, 'char[]', 128),
-    new MavLinkPacketField('paramType', 148, false, 1, 'uint8_t'),
+    new MavLinkPacketField('paramCount', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('paramIndex', 2, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('paramId', 4, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('paramValue', 20, false, 1, 'char[]', '', 128),
+    new MavLinkPacketField('paramType', 148, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12938,11 +12969,11 @@ export class ParamExtSet extends MavLinkData {
   static MAGIC_NUMBER = 78
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('paramId', 2, false, 1, 'char[]', 16),
-    new MavLinkPacketField('paramValue', 18, false, 1, 'char[]', 128),
-    new MavLinkPacketField('paramType', 146, false, 1, 'uint8_t'),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('paramId', 2, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('paramValue', 18, false, 1, 'char[]', '', 128),
+    new MavLinkPacketField('paramType', 146, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -12979,10 +13010,10 @@ export class ParamExtAck extends MavLinkData {
   static MAGIC_NUMBER = 132
 
   static FIELDS = [
-    new MavLinkPacketField('paramId', 0, false, 1, 'char[]', 16),
-    new MavLinkPacketField('paramValue', 16, false, 1, 'char[]', 128),
-    new MavLinkPacketField('paramType', 144, false, 1, 'uint8_t'),
-    new MavLinkPacketField('paramResult', 145, false, 1, 'uint8_t'),
+    new MavLinkPacketField('paramId', 0, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('paramValue', 16, false, 1, 'char[]', '', 128),
+    new MavLinkPacketField('paramType', 144, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('paramResult', 145, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13015,15 +13046,15 @@ export class ObstacleDistance extends MavLinkData {
   static MAGIC_NUMBER = 23
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('distances', 8, false, 2, 'uint16_t[]', 72),
-    new MavLinkPacketField('minDistance', 152, false, 2, 'uint16_t'),
-    new MavLinkPacketField('maxDistance', 154, false, 2, 'uint16_t'),
-    new MavLinkPacketField('sensorType', 156, false, 1, 'uint8_t'),
-    new MavLinkPacketField('increment', 157, false, 1, 'uint8_t'),
-    new MavLinkPacketField('incrementF', 158, true, 4, 'float'),
-    new MavLinkPacketField('angleOffset', 162, true, 4, 'float'),
-    new MavLinkPacketField('frame', 166, true, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('distances', 8, false, 2, 'uint16_t[]', 'cm', 72),
+    new MavLinkPacketField('minDistance', 152, false, 2, 'uint16_t', 'cm'),
+    new MavLinkPacketField('maxDistance', 154, false, 2, 'uint16_t', 'cm'),
+    new MavLinkPacketField('sensorType', 156, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('increment', 157, false, 1, 'uint8_t', 'deg'),
+    new MavLinkPacketField('incrementF', 158, true, 4, 'float', 'deg'),
+    new MavLinkPacketField('angleOffset', 162, true, 4, 'float', 'deg'),
+    new MavLinkPacketField('frame', 166, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13085,23 +13116,23 @@ export class Odometry extends MavLinkData {
   static MAGIC_NUMBER = 91
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('x', 8, false, 4, 'float'),
-    new MavLinkPacketField('y', 12, false, 4, 'float'),
-    new MavLinkPacketField('z', 16, false, 4, 'float'),
-    new MavLinkPacketField('q', 20, false, 4, 'float[]', 4),
-    new MavLinkPacketField('vx', 36, false, 4, 'float'),
-    new MavLinkPacketField('vy', 40, false, 4, 'float'),
-    new MavLinkPacketField('vz', 44, false, 4, 'float'),
-    new MavLinkPacketField('rollspeed', 48, false, 4, 'float'),
-    new MavLinkPacketField('pitchspeed', 52, false, 4, 'float'),
-    new MavLinkPacketField('yawspeed', 56, false, 4, 'float'),
-    new MavLinkPacketField('poseCovariance', 60, false, 4, 'float[]', 21),
-    new MavLinkPacketField('velocityCovariance', 144, false, 4, 'float[]', 21),
-    new MavLinkPacketField('frameId', 228, false, 1, 'uint8_t'),
-    new MavLinkPacketField('childFrameId', 229, false, 1, 'uint8_t'),
-    new MavLinkPacketField('resetCounter', 230, true, 1, 'uint8_t'),
-    new MavLinkPacketField('estimatorType', 231, true, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('x', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('y', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('z', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('q', 20, false, 4, 'float[]', '', 4),
+    new MavLinkPacketField('vx', 36, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vy', 40, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('vz', 44, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('rollspeed', 48, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('pitchspeed', 52, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('yawspeed', 56, false, 4, 'float', 'rad/s'),
+    new MavLinkPacketField('poseCovariance', 60, false, 4, 'float[]', '', 21),
+    new MavLinkPacketField('velocityCovariance', 144, false, 4, 'float[]', '', 21),
+    new MavLinkPacketField('frameId', 228, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('childFrameId', 229, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('resetCounter', 230, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('estimatorType', 231, true, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13191,20 +13222,20 @@ export class TrajectoryRepresentationWaypoints extends MavLinkData {
   static MAGIC_NUMBER = 236
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('posX', 8, false, 4, 'float[]', 5),
-    new MavLinkPacketField('posY', 28, false, 4, 'float[]', 5),
-    new MavLinkPacketField('posZ', 48, false, 4, 'float[]', 5),
-    new MavLinkPacketField('velX', 68, false, 4, 'float[]', 5),
-    new MavLinkPacketField('velY', 88, false, 4, 'float[]', 5),
-    new MavLinkPacketField('velZ', 108, false, 4, 'float[]', 5),
-    new MavLinkPacketField('accX', 128, false, 4, 'float[]', 5),
-    new MavLinkPacketField('accY', 148, false, 4, 'float[]', 5),
-    new MavLinkPacketField('accZ', 168, false, 4, 'float[]', 5),
-    new MavLinkPacketField('posYaw', 188, false, 4, 'float[]', 5),
-    new MavLinkPacketField('velYaw', 208, false, 4, 'float[]', 5),
-    new MavLinkPacketField('command', 228, false, 2, 'uint16_t[]', 5),
-    new MavLinkPacketField('validPoints', 238, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('posX', 8, false, 4, 'float[]', 'm', 5),
+    new MavLinkPacketField('posY', 28, false, 4, 'float[]', 'm', 5),
+    new MavLinkPacketField('posZ', 48, false, 4, 'float[]', 'm', 5),
+    new MavLinkPacketField('velX', 68, false, 4, 'float[]', 'm/s', 5),
+    new MavLinkPacketField('velY', 88, false, 4, 'float[]', 'm/s', 5),
+    new MavLinkPacketField('velZ', 108, false, 4, 'float[]', 'm/s', 5),
+    new MavLinkPacketField('accX', 128, false, 4, 'float[]', 'm/s/s', 5),
+    new MavLinkPacketField('accY', 148, false, 4, 'float[]', 'm/s/s', 5),
+    new MavLinkPacketField('accZ', 168, false, 4, 'float[]', 'm/s/s', 5),
+    new MavLinkPacketField('posYaw', 188, false, 4, 'float[]', 'rad', 5),
+    new MavLinkPacketField('velYaw', 208, false, 4, 'float[]', 'rad/s', 5),
+    new MavLinkPacketField('command', 228, false, 2, 'uint16_t[]', '', 5),
+    new MavLinkPacketField('validPoints', 238, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13277,13 +13308,13 @@ export class TrajectoryRepresentationBezier extends MavLinkData {
   static MAGIC_NUMBER = 231
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('posX', 8, false, 4, 'float[]', 5),
-    new MavLinkPacketField('posY', 28, false, 4, 'float[]', 5),
-    new MavLinkPacketField('posZ', 48, false, 4, 'float[]', 5),
-    new MavLinkPacketField('delta', 68, false, 4, 'float[]', 5),
-    new MavLinkPacketField('posYaw', 88, false, 4, 'float[]', 5),
-    new MavLinkPacketField('validPoints', 108, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('posX', 8, false, 4, 'float[]', 'm', 5),
+    new MavLinkPacketField('posY', 28, false, 4, 'float[]', 'm', 5),
+    new MavLinkPacketField('posZ', 48, false, 4, 'float[]', 'm', 5),
+    new MavLinkPacketField('delta', 68, false, 4, 'float[]', 's', 5),
+    new MavLinkPacketField('posYaw', 88, false, 4, 'float[]', 'rad', 5),
+    new MavLinkPacketField('validPoints', 108, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13327,13 +13358,13 @@ export class CellularStatus extends MavLinkData {
   static MAGIC_NUMBER = 72
 
   static FIELDS = [
-    new MavLinkPacketField('mcc', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('mnc', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('lac', 4, false, 2, 'uint16_t'),
-    new MavLinkPacketField('status', 6, false, 1, 'uint8_t'),
-    new MavLinkPacketField('failureReason', 7, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 8, false, 1, 'uint8_t'),
-    new MavLinkPacketField('quality', 9, false, 1, 'uint8_t'),
+    new MavLinkPacketField('mcc', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('mnc', 2, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('lac', 4, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('status', 6, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('failureReason', 7, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type', 8, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('quality', 9, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13376,14 +13407,14 @@ export class IsbdLinkStatus extends MavLinkData {
   static MAGIC_NUMBER = 225
 
   static FIELDS = [
-    new MavLinkPacketField('timestamp', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lastHeartbeat', 8, false, 8, 'uint64_t'),
-    new MavLinkPacketField('failedSessions', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('successfulSessions', 18, false, 2, 'uint16_t'),
-    new MavLinkPacketField('signalQuality', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('ringPending', 21, false, 1, 'uint8_t'),
-    new MavLinkPacketField('txSessionPending', 22, false, 1, 'uint8_t'),
-    new MavLinkPacketField('rxSessionPending', 23, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timestamp', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('lastHeartbeat', 8, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('failedSessions', 16, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('successfulSessions', 18, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('signalQuality', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('ringPending', 21, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('txSessionPending', 22, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rxSessionPending', 23, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13434,14 +13465,14 @@ export class CellularConfig extends MavLinkData {
   static MAGIC_NUMBER = 245
 
   static FIELDS = [
-    new MavLinkPacketField('enableLte', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('enablePin', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('pin', 2, false, 1, 'char[]', 16),
-    new MavLinkPacketField('newPin', 18, false, 1, 'char[]', 16),
-    new MavLinkPacketField('apn', 34, false, 1, 'char[]', 32),
-    new MavLinkPacketField('puk', 66, false, 1, 'char[]', 16),
-    new MavLinkPacketField('roaming', 82, false, 1, 'uint8_t'),
-    new MavLinkPacketField('response', 83, false, 1, 'uint8_t'),
+    new MavLinkPacketField('enableLte', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('enablePin', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('pin', 2, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('newPin', 18, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('apn', 34, false, 1, 'char[]', '', 32),
+    new MavLinkPacketField('puk', 66, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('roaming', 82, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('response', 83, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13493,8 +13524,8 @@ export class RawRpm extends MavLinkData {
   static MAGIC_NUMBER = 199
 
   static FIELDS = [
-    new MavLinkPacketField('frequency', 0, false, 4, 'float'),
-    new MavLinkPacketField('index', 4, false, 1, 'uint8_t'),
+    new MavLinkPacketField('frequency', 0, false, 4, 'float', 'rpm'),
+    new MavLinkPacketField('index', 4, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13517,24 +13548,24 @@ export class UtmGlobalPosition extends MavLinkData {
   static MAGIC_NUMBER = 99
 
   static FIELDS = [
-    new MavLinkPacketField('time', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lat', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('lon', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('alt', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('relativeAlt', 20, false, 4, 'int32_t'),
-    new MavLinkPacketField('nextLat', 24, false, 4, 'int32_t'),
-    new MavLinkPacketField('nextLon', 28, false, 4, 'int32_t'),
-    new MavLinkPacketField('nextAlt', 32, false, 4, 'int32_t'),
-    new MavLinkPacketField('vx', 36, false, 2, 'int16_t'),
-    new MavLinkPacketField('vy', 38, false, 2, 'int16_t'),
-    new MavLinkPacketField('vz', 40, false, 2, 'int16_t'),
-    new MavLinkPacketField('hAcc', 42, false, 2, 'uint16_t'),
-    new MavLinkPacketField('vAcc', 44, false, 2, 'uint16_t'),
-    new MavLinkPacketField('velAcc', 46, false, 2, 'uint16_t'),
-    new MavLinkPacketField('updateRate', 48, false, 2, 'uint16_t'),
-    new MavLinkPacketField('uasId', 50, false, 1, 'uint8_t[]', 18),
-    new MavLinkPacketField('flightState', 68, false, 1, 'uint8_t'),
-    new MavLinkPacketField('flags', 69, false, 1, 'uint8_t'),
+    new MavLinkPacketField('time', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('lat', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('lon', 12, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('alt', 16, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('relativeAlt', 20, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('nextLat', 24, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('nextLon', 28, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('nextAlt', 32, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('vx', 36, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vy', 38, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('vz', 40, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('hAcc', 42, false, 2, 'uint16_t', 'mm'),
+    new MavLinkPacketField('vAcc', 44, false, 2, 'uint16_t', 'mm'),
+    new MavLinkPacketField('velAcc', 46, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('updateRate', 48, false, 2, 'uint16_t', 'cs'),
+    new MavLinkPacketField('uasId', 50, false, 1, 'uint8_t[]', '', 18),
+    new MavLinkPacketField('flightState', 68, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('flags', 69, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13623,10 +13654,10 @@ export class DebugFloatArray extends MavLinkData {
   static MAGIC_NUMBER = 232
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('arrayId', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('name', 10, false, 1, 'char[]', 10),
-    new MavLinkPacketField('data', 20, true, 4, 'float[]', 58),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('arrayId', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('name', 10, false, 1, 'char[]', '', 10),
+    new MavLinkPacketField('data', 20, true, 4, 'float[]', '', 58),
   ]
 
   /**
@@ -13658,12 +13689,12 @@ export class OrbitExecutionStatus extends MavLinkData {
   static MAGIC_NUMBER = 11
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('radius', 8, false, 4, 'float'),
-    new MavLinkPacketField('x', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('y', 16, false, 4, 'int32_t'),
-    new MavLinkPacketField('z', 20, false, 4, 'float'),
-    new MavLinkPacketField('frame', 24, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('radius', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('x', 12, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('y', 16, false, 4, 'int32_t', ''),
+    new MavLinkPacketField('z', 20, false, 4, 'float', 'm'),
+    new MavLinkPacketField('frame', 24, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -13707,23 +13738,23 @@ export class SmartBatteryInfo extends MavLinkData {
   static MAGIC_NUMBER = 75
 
   static FIELDS = [
-    new MavLinkPacketField('capacityFullSpecification', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('capacityFull', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('cycleCount', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('weight', 10, false, 2, 'uint16_t'),
-    new MavLinkPacketField('dischargeMinimumVoltage', 12, false, 2, 'uint16_t'),
-    new MavLinkPacketField('chargingMinimumVoltage', 14, false, 2, 'uint16_t'),
-    new MavLinkPacketField('restingMinimumVoltage', 16, false, 2, 'uint16_t'),
-    new MavLinkPacketField('id', 18, false, 1, 'uint8_t'),
-    new MavLinkPacketField('batteryFunction', 19, false, 1, 'uint8_t'),
-    new MavLinkPacketField('type', 20, false, 1, 'uint8_t'),
-    new MavLinkPacketField('serialNumber', 21, false, 1, 'char[]', 16),
-    new MavLinkPacketField('deviceName', 37, false, 1, 'char[]', 50),
-    new MavLinkPacketField('chargingMaximumVoltage', 87, true, 2, 'uint16_t'),
-    new MavLinkPacketField('cellsInSeries', 89, true, 1, 'uint8_t'),
-    new MavLinkPacketField('dischargeMaximumCurrent', 90, true, 4, 'uint32_t'),
-    new MavLinkPacketField('dischargeMaximumBurstCurrent', 94, true, 4, 'uint32_t'),
-    new MavLinkPacketField('manufactureDate', 98, true, 1, 'char[]', 11),
+    new MavLinkPacketField('capacityFullSpecification', 0, false, 4, 'int32_t', 'mAh'),
+    new MavLinkPacketField('capacityFull', 4, false, 4, 'int32_t', 'mAh'),
+    new MavLinkPacketField('cycleCount', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('weight', 10, false, 2, 'uint16_t', 'g'),
+    new MavLinkPacketField('dischargeMinimumVoltage', 12, false, 2, 'uint16_t', 'mV'),
+    new MavLinkPacketField('chargingMinimumVoltage', 14, false, 2, 'uint16_t', 'mV'),
+    new MavLinkPacketField('restingMinimumVoltage', 16, false, 2, 'uint16_t', 'mV'),
+    new MavLinkPacketField('id', 18, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('batteryFunction', 19, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type', 20, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('serialNumber', 21, false, 1, 'char[]', '', 16),
+    new MavLinkPacketField('deviceName', 37, false, 1, 'char[]', '', 50),
+    new MavLinkPacketField('chargingMaximumVoltage', 87, true, 2, 'uint16_t', 'mV'),
+    new MavLinkPacketField('cellsInSeries', 89, true, 1, 'uint8_t', ''),
+    new MavLinkPacketField('dischargeMaximumCurrent', 90, true, 4, 'uint32_t', 'mA'),
+    new MavLinkPacketField('dischargeMaximumBurstCurrent', 94, true, 4, 'uint32_t', 'mA'),
+    new MavLinkPacketField('manufactureDate', 98, true, 1, 'char[]', '', 11),
   ]
 
   /**
@@ -13807,17 +13838,17 @@ export class GeneratorStatus extends MavLinkData {
   static MAGIC_NUMBER = 117
 
   static FIELDS = [
-    new MavLinkPacketField('status', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('batteryCurrent', 8, false, 4, 'float'),
-    new MavLinkPacketField('loadCurrent', 12, false, 4, 'float'),
-    new MavLinkPacketField('powerGenerated', 16, false, 4, 'float'),
-    new MavLinkPacketField('busVoltage', 20, false, 4, 'float'),
-    new MavLinkPacketField('batCurrentSetpoint', 24, false, 4, 'float'),
-    new MavLinkPacketField('runtime', 28, false, 4, 'uint32_t'),
-    new MavLinkPacketField('timeUntilMaintenance', 32, false, 4, 'int32_t'),
-    new MavLinkPacketField('generatorSpeed', 36, false, 2, 'uint16_t'),
-    new MavLinkPacketField('rectifierTemperature', 38, false, 2, 'int16_t'),
-    new MavLinkPacketField('generatorTemperature', 40, false, 2, 'int16_t'),
+    new MavLinkPacketField('status', 0, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('batteryCurrent', 8, false, 4, 'float', 'A'),
+    new MavLinkPacketField('loadCurrent', 12, false, 4, 'float', 'A'),
+    new MavLinkPacketField('powerGenerated', 16, false, 4, 'float', 'W'),
+    new MavLinkPacketField('busVoltage', 20, false, 4, 'float', 'V'),
+    new MavLinkPacketField('batCurrentSetpoint', 24, false, 4, 'float', 'A'),
+    new MavLinkPacketField('runtime', 28, false, 4, 'uint32_t', 's'),
+    new MavLinkPacketField('timeUntilMaintenance', 32, false, 4, 'int32_t', 's'),
+    new MavLinkPacketField('generatorSpeed', 36, false, 2, 'uint16_t', 'rpm'),
+    new MavLinkPacketField('rectifierTemperature', 38, false, 2, 'int16_t', 'degC'),
+    new MavLinkPacketField('generatorTemperature', 40, false, 2, 'int16_t', 'degC'),
   ]
 
   /**
@@ -13880,9 +13911,9 @@ export class ActuatorOutputStatus extends MavLinkData {
   static MAGIC_NUMBER = 251
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('active', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('actuator', 12, false, 4, 'float[]', 32),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('active', 8, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('actuator', 12, false, 4, 'float[]', '', 32),
   ]
 
   /**
@@ -13909,11 +13940,11 @@ export class TimeEstimateToTarget extends MavLinkData {
   static MAGIC_NUMBER = 232
 
   static FIELDS = [
-    new MavLinkPacketField('safeReturn', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('land', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('missionNextItem', 8, false, 4, 'int32_t'),
-    new MavLinkPacketField('missionEnd', 12, false, 4, 'int32_t'),
-    new MavLinkPacketField('commandedAction', 16, false, 4, 'int32_t'),
+    new MavLinkPacketField('safeReturn', 0, false, 4, 'int32_t', 's'),
+    new MavLinkPacketField('land', 4, false, 4, 'int32_t', 's'),
+    new MavLinkPacketField('missionNextItem', 8, false, 4, 'int32_t', 's'),
+    new MavLinkPacketField('missionEnd', 12, false, 4, 'int32_t', 's'),
+    new MavLinkPacketField('commandedAction', 16, false, 4, 'int32_t', 's'),
   ]
 
   /**
@@ -13956,11 +13987,11 @@ export class Tunnel extends MavLinkData {
   static MAGIC_NUMBER = 147
 
   static FIELDS = [
-    new MavLinkPacketField('payloadType', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t'),
-    new MavLinkPacketField('payloadLength', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('payload', 5, false, 1, 'uint8_t[]', 128),
+    new MavLinkPacketField('payloadType', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 3, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('payloadLength', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('payload', 5, false, 1, 'uint8_t[]', '', 128),
   ]
 
   /**
@@ -14000,26 +14031,26 @@ export class OnboardComputerStatus extends MavLinkData {
   static MAGIC_NUMBER = 156
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('uptime', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('ramUsage', 12, false, 4, 'uint32_t'),
-    new MavLinkPacketField('ramTotal', 16, false, 4, 'uint32_t'),
-    new MavLinkPacketField('storageType', 20, false, 4, 'uint32_t[]', 4),
-    new MavLinkPacketField('storageUsage', 36, false, 4, 'uint32_t[]', 4),
-    new MavLinkPacketField('storageTotal', 52, false, 4, 'uint32_t[]', 4),
-    new MavLinkPacketField('linkType', 68, false, 4, 'uint32_t[]', 6),
-    new MavLinkPacketField('linkTxRate', 92, false, 4, 'uint32_t[]', 6),
-    new MavLinkPacketField('linkRxRate', 116, false, 4, 'uint32_t[]', 6),
-    new MavLinkPacketField('linkTxMax', 140, false, 4, 'uint32_t[]', 6),
-    new MavLinkPacketField('linkRxMax', 164, false, 4, 'uint32_t[]', 6),
-    new MavLinkPacketField('fanSpeed', 188, false, 2, 'int16_t[]', 4),
-    new MavLinkPacketField('type', 196, false, 1, 'uint8_t'),
-    new MavLinkPacketField('cpuCores', 197, false, 1, 'uint8_t[]', 8),
-    new MavLinkPacketField('cpuCombined', 205, false, 1, 'uint8_t[]', 10),
-    new MavLinkPacketField('gpuCores', 215, false, 1, 'uint8_t[]', 4),
-    new MavLinkPacketField('gpuCombined', 219, false, 1, 'uint8_t[]', 10),
-    new MavLinkPacketField('temperatureBoard', 229, false, 1, 'int8_t'),
-    new MavLinkPacketField('temperatureCore', 230, false, 1, 'int8_t[]', 8),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('uptime', 8, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('ramUsage', 12, false, 4, 'uint32_t', 'MiB'),
+    new MavLinkPacketField('ramTotal', 16, false, 4, 'uint32_t', 'MiB'),
+    new MavLinkPacketField('storageType', 20, false, 4, 'uint32_t[]', '', 4),
+    new MavLinkPacketField('storageUsage', 36, false, 4, 'uint32_t[]', 'MiB', 4),
+    new MavLinkPacketField('storageTotal', 52, false, 4, 'uint32_t[]', 'MiB', 4),
+    new MavLinkPacketField('linkType', 68, false, 4, 'uint32_t[]', '', 6),
+    new MavLinkPacketField('linkTxRate', 92, false, 4, 'uint32_t[]', 'KiB/s', 6),
+    new MavLinkPacketField('linkRxRate', 116, false, 4, 'uint32_t[]', 'KiB/s', 6),
+    new MavLinkPacketField('linkTxMax', 140, false, 4, 'uint32_t[]', 'KiB/s', 6),
+    new MavLinkPacketField('linkRxMax', 164, false, 4, 'uint32_t[]', 'KiB/s', 6),
+    new MavLinkPacketField('fanSpeed', 188, false, 2, 'int16_t[]', 'rpm', 4),
+    new MavLinkPacketField('type', 196, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('cpuCores', 197, false, 1, 'uint8_t[]', '', 8),
+    new MavLinkPacketField('cpuCombined', 205, false, 1, 'uint8_t[]', '', 10),
+    new MavLinkPacketField('gpuCores', 215, false, 1, 'uint8_t[]', '', 4),
+    new MavLinkPacketField('gpuCombined', 219, false, 1, 'uint8_t[]', '', 10),
+    new MavLinkPacketField('temperatureBoard', 229, false, 1, 'int8_t', 'degC'),
+    new MavLinkPacketField('temperatureCore', 230, false, 1, 'int8_t[]', 'degC', 8),
   ]
 
   /**
@@ -14128,11 +14159,11 @@ export class ComponentInformation extends MavLinkData {
   static MAGIC_NUMBER = 0
 
   static FIELDS = [
-    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('generalMetadataFileCrc', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('peripheralsMetadataFileCrc', 8, false, 4, 'uint32_t'),
-    new MavLinkPacketField('generalMetadataUri', 12, false, 1, 'char[]', 100),
-    new MavLinkPacketField('peripheralsMetadataUri', 112, false, 1, 'char[]', 100),
+    new MavLinkPacketField('timeBootMs', 0, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('generalMetadataFileCrc', 4, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('peripheralsMetadataFileCrc', 8, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('generalMetadataUri', 12, false, 1, 'char[]', '', 100),
+    new MavLinkPacketField('peripheralsMetadataUri', 112, false, 1, 'char[]', '', 100),
   ]
 
   /**
@@ -14169,10 +14200,10 @@ export class PlayTuneV2 extends MavLinkData {
   static MAGIC_NUMBER = 110
 
   static FIELDS = [
-    new MavLinkPacketField('format', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('tune', 6, false, 1, 'char[]', 248),
+    new MavLinkPacketField('format', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('tune', 6, false, 1, 'char[]', '', 248),
   ]
 
   /**
@@ -14203,9 +14234,9 @@ export class SupportedTunes extends MavLinkData {
   static MAGIC_NUMBER = 183
 
   static FIELDS = [
-    new MavLinkPacketField('format', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
+    new MavLinkPacketField('format', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -14235,13 +14266,13 @@ export class Event extends MavLinkData {
   static MAGIC_NUMBER = 160
 
   static FIELDS = [
-    new MavLinkPacketField('id', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('eventTimeBootMs', 4, false, 4, 'uint32_t'),
-    new MavLinkPacketField('sequence', 8, false, 2, 'uint16_t'),
-    new MavLinkPacketField('destinationComponent', 10, false, 1, 'uint8_t'),
-    new MavLinkPacketField('destinationSystem', 11, false, 1, 'uint8_t'),
-    new MavLinkPacketField('logLevels', 12, false, 1, 'uint8_t'),
-    new MavLinkPacketField('arguments', 13, false, 1, 'uint8_t[]', 40),
+    new MavLinkPacketField('id', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('eventTimeBootMs', 4, false, 4, 'uint32_t', 'ms'),
+    new MavLinkPacketField('sequence', 8, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('destinationComponent', 10, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('destinationSystem', 11, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('logLevels', 12, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('arguments', 13, false, 1, 'uint8_t[]', '', 40),
   ]
 
   /**
@@ -14287,8 +14318,8 @@ export class CurrentEventSequence extends MavLinkData {
   static MAGIC_NUMBER = 106
 
   static FIELDS = [
-    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('flags', 2, false, 1, 'uint8_t'),
+    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('flags', 2, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -14313,10 +14344,10 @@ export class RequestEvent extends MavLinkData {
   static MAGIC_NUMBER = 33
 
   static FIELDS = [
-    new MavLinkPacketField('firstSequence', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('lastSequence', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
+    new MavLinkPacketField('firstSequence', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('lastSequence', 2, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -14347,11 +14378,11 @@ export class ResponseEventError extends MavLinkData {
   static MAGIC_NUMBER = 77
 
   static FIELDS = [
-    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t'),
-    new MavLinkPacketField('sequenceOldestAvailable', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('reason', 6, false, 1, 'uint8_t'),
+    new MavLinkPacketField('sequence', 0, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('sequenceOldestAvailable', 2, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('reason', 6, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -14386,9 +14417,9 @@ export class WheelDistance extends MavLinkData {
   static MAGIC_NUMBER = 113
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('distance', 8, false, 8, 'double[]', 16),
-    new MavLinkPacketField('count', 136, false, 1, 'uint8_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('distance', 8, false, 8, 'double[]', 'm', 16),
+    new MavLinkPacketField('count', 136, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -14417,14 +14448,14 @@ export class WinchStatus extends MavLinkData {
   static MAGIC_NUMBER = 117
 
   static FIELDS = [
-    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t'),
-    new MavLinkPacketField('lineLength', 8, false, 4, 'float'),
-    new MavLinkPacketField('speed', 12, false, 4, 'float'),
-    new MavLinkPacketField('tension', 16, false, 4, 'float'),
-    new MavLinkPacketField('voltage', 20, false, 4, 'float'),
-    new MavLinkPacketField('current', 24, false, 4, 'float'),
-    new MavLinkPacketField('status', 28, false, 4, 'uint32_t'),
-    new MavLinkPacketField('temperature', 32, false, 2, 'int16_t'),
+    new MavLinkPacketField('timeUsec', 0, false, 8, 'uint64_t', 'us'),
+    new MavLinkPacketField('lineLength', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('speed', 12, false, 4, 'float', 'm/s'),
+    new MavLinkPacketField('tension', 16, false, 4, 'float', 'kg'),
+    new MavLinkPacketField('voltage', 20, false, 4, 'float', 'V'),
+    new MavLinkPacketField('current', 24, false, 4, 'float', 'A'),
+    new MavLinkPacketField('status', 28, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('temperature', 32, false, 2, 'int16_t', 'degC'),
   ]
 
   /**
@@ -14477,12 +14508,12 @@ export class OpenDroneIdBasicId extends MavLinkData {
   static MAGIC_NUMBER = 114
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('idType', 22, false, 1, 'uint8_t'),
-    new MavLinkPacketField('uaType', 23, false, 1, 'uint8_t'),
-    new MavLinkPacketField('uasId', 24, false, 1, 'uint8_t[]', 20),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('idType', 22, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('uaType', 23, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('uasId', 24, false, 1, 'uint8_t[]', '', 20),
   ]
 
   /**
@@ -14524,25 +14555,25 @@ export class OpenDroneIdLocation extends MavLinkData {
   static MAGIC_NUMBER = 254
 
   static FIELDS = [
-    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('altitudeBarometric', 8, false, 4, 'float'),
-    new MavLinkPacketField('altitudeGeodetic', 12, false, 4, 'float'),
-    new MavLinkPacketField('height', 16, false, 4, 'float'),
-    new MavLinkPacketField('timestamp', 20, false, 4, 'float'),
-    new MavLinkPacketField('direction', 24, false, 2, 'uint16_t'),
-    new MavLinkPacketField('speedHorizontal', 26, false, 2, 'uint16_t'),
-    new MavLinkPacketField('speedVertical', 28, false, 2, 'int16_t'),
-    new MavLinkPacketField('targetSystem', 30, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 31, false, 1, 'uint8_t'),
-    new MavLinkPacketField('idOrMac', 32, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('status', 52, false, 1, 'uint8_t'),
-    new MavLinkPacketField('heightReference', 53, false, 1, 'uint8_t'),
-    new MavLinkPacketField('horizontalAccuracy', 54, false, 1, 'uint8_t'),
-    new MavLinkPacketField('verticalAccuracy', 55, false, 1, 'uint8_t'),
-    new MavLinkPacketField('barometerAccuracy', 56, false, 1, 'uint8_t'),
-    new MavLinkPacketField('speedAccuracy', 57, false, 1, 'uint8_t'),
-    new MavLinkPacketField('timestampAccuracy', 58, false, 1, 'uint8_t'),
+    new MavLinkPacketField('latitude', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('longitude', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('altitudeBarometric', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('altitudeGeodetic', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('height', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('timestamp', 20, false, 4, 'float', 's'),
+    new MavLinkPacketField('direction', 24, false, 2, 'uint16_t', 'cdeg'),
+    new MavLinkPacketField('speedHorizontal', 26, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('speedVertical', 28, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('targetSystem', 30, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 31, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('idOrMac', 32, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('status', 52, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('heightReference', 53, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('horizontalAccuracy', 54, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('verticalAccuracy', 55, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('barometerAccuracy', 56, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('speedAccuracy', 57, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('timestampAccuracy', 58, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -14646,15 +14677,15 @@ export class OpenDroneIdAuthentication extends MavLinkData {
   static MAGIC_NUMBER = 140
 
   static FIELDS = [
-    new MavLinkPacketField('timestamp', 0, false, 4, 'uint32_t'),
-    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t'),
-    new MavLinkPacketField('idOrMac', 6, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('authenticationType', 26, false, 1, 'uint8_t'),
-    new MavLinkPacketField('dataPage', 27, false, 1, 'uint8_t'),
-    new MavLinkPacketField('lastPageIndex', 28, false, 1, 'uint8_t'),
-    new MavLinkPacketField('length', 29, false, 1, 'uint8_t'),
-    new MavLinkPacketField('authenticationData', 30, false, 1, 'uint8_t[]', 23),
+    new MavLinkPacketField('timestamp', 0, false, 4, 'uint32_t', 's'),
+    new MavLinkPacketField('targetSystem', 4, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 5, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('idOrMac', 6, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('authenticationType', 26, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('dataPage', 27, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('lastPageIndex', 28, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('length', 29, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('authenticationData', 30, false, 1, 'uint8_t[]', '', 23),
   ]
 
   /**
@@ -14714,11 +14745,11 @@ export class OpenDroneIdSelfId extends MavLinkData {
   static MAGIC_NUMBER = 249
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('descriptionType', 22, false, 1, 'uint8_t'),
-    new MavLinkPacketField('description', 23, false, 1, 'char[]', 23),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('descriptionType', 22, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('description', 23, false, 1, 'char[]', '', 23),
   ]
 
   /**
@@ -14756,20 +14787,20 @@ export class OpenDroneIdSystem extends MavLinkData {
   static MAGIC_NUMBER = 150
 
   static FIELDS = [
-    new MavLinkPacketField('operatorLatitude', 0, false, 4, 'int32_t'),
-    new MavLinkPacketField('operatorLongitude', 4, false, 4, 'int32_t'),
-    new MavLinkPacketField('areaCeiling', 8, false, 4, 'float'),
-    new MavLinkPacketField('areaFloor', 12, false, 4, 'float'),
-    new MavLinkPacketField('operatorAltitudeGeo', 16, false, 4, 'float'),
-    new MavLinkPacketField('areaCount', 20, false, 2, 'uint16_t'),
-    new MavLinkPacketField('areaRadius', 22, false, 2, 'uint16_t'),
-    new MavLinkPacketField('targetSystem', 24, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 25, false, 1, 'uint8_t'),
-    new MavLinkPacketField('idOrMac', 26, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('operatorLocationType', 46, false, 1, 'uint8_t'),
-    new MavLinkPacketField('classificationType', 47, false, 1, 'uint8_t'),
-    new MavLinkPacketField('categoryEu', 48, false, 1, 'uint8_t'),
-    new MavLinkPacketField('classEu', 49, false, 1, 'uint8_t'),
+    new MavLinkPacketField('operatorLatitude', 0, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('operatorLongitude', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('areaCeiling', 8, false, 4, 'float', 'm'),
+    new MavLinkPacketField('areaFloor', 12, false, 4, 'float', 'm'),
+    new MavLinkPacketField('operatorAltitudeGeo', 16, false, 4, 'float', 'm'),
+    new MavLinkPacketField('areaCount', 20, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('areaRadius', 22, false, 2, 'uint16_t', 'm'),
+    new MavLinkPacketField('targetSystem', 24, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 25, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('idOrMac', 26, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('operatorLocationType', 46, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('classificationType', 47, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('categoryEu', 48, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('classEu', 49, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -14842,11 +14873,11 @@ export class OpenDroneIdOperatorId extends MavLinkData {
   static MAGIC_NUMBER = 49
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('operatorIdType', 22, false, 1, 'uint8_t'),
-    new MavLinkPacketField('operatorId', 23, false, 1, 'char[]', 20),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('operatorIdType', 22, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('operatorId', 23, false, 1, 'char[]', '', 20),
   ]
 
   /**
@@ -14886,12 +14917,12 @@ export class OpenDroneIdMessagePack extends MavLinkData {
   static MAGIC_NUMBER = 94
 
   static FIELDS = [
-    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t'),
-    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t'),
-    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', 20),
-    new MavLinkPacketField('singleMessageSize', 22, false, 1, 'uint8_t'),
-    new MavLinkPacketField('msgPackSize', 23, false, 1, 'uint8_t'),
-    new MavLinkPacketField('messages', 24, false, 1, 'uint8_t[]', 225),
+    new MavLinkPacketField('targetSystem', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('targetComponent', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('idOrMac', 2, false, 1, 'uint8_t[]', '', 20),
+    new MavLinkPacketField('singleMessageSize', 22, false, 1, 'uint8_t', 'bytes'),
+    new MavLinkPacketField('msgPackSize', 23, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('messages', 24, false, 1, 'uint8_t[]', '', 225),
   ]
 
   /**
@@ -14933,9 +14964,9 @@ export class HygrometerSensor extends MavLinkData {
   static MAGIC_NUMBER = 20
 
   static FIELDS = [
-    new MavLinkPacketField('temperature', 0, false, 2, 'int16_t'),
-    new MavLinkPacketField('humidity', 2, false, 2, 'uint16_t'),
-    new MavLinkPacketField('id', 4, false, 1, 'uint8_t'),
+    new MavLinkPacketField('temperature', 0, false, 2, 'int16_t', 'cdegC'),
+    new MavLinkPacketField('humidity', 2, false, 2, 'uint16_t', 'c%'),
+    new MavLinkPacketField('id', 4, false, 1, 'uint8_t', ''),
   ]
 
   /**

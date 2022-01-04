@@ -4,6 +4,24 @@ import * as fs from 'fs'
 import * as parser from 'xml2js'
 import { x25crc, dump } from './lib/utils'
 
+import {
+  ardupilotmega,
+  common,
+  icarous,
+  MavLinkData,
+  MavLinkDataConstructor, minimal,
+  MSG_ID_MAGIC_NUMBER, uavionix,
+  uint16_t,
+  uint8_t,
+} from './index'
+export const REGISTRY: any = {
+  ...minimal.REGISTRY,
+  ...common.REGISTRY,
+  ...ardupilotmega.REGISTRY,
+  ...uavionix.REGISTRY,
+  ...icarous.REGISTRY,
+}
+
 const snakeToCamel = s => s.replace(/([-_]\w)/g, g => g[1].toUpperCase());
 
 const snakeToPascal = s => {
@@ -103,6 +121,7 @@ class Writter {
 }
 
 const magicNumbers = {}
+const msgIDSet = new Set();
 
 function generate(name: string, obj: any, output: Writter) {
   // ------------------------------------------------------------------------
@@ -110,8 +129,8 @@ function generate(name: string, obj: any, output: Writter) {
   // ------------------------------------------------------------------------
 
   // parse XML data
-
-  const enums = obj.mavlink.enums[0].enum.map(xml => ({
+  const xmlEnum = obj.mavlink.enums[0].enum ?? [];
+  const enums = xmlEnum.map(xml => ({
     name: makeClassName(xml.$.name),
     source: {
       name: xml.$.name,
@@ -358,6 +377,11 @@ function generate(name: string, obj: any, output: Writter) {
 
     // put the magic number in global table - the magic-numbers.ts will be generated at the end from it
     magicNumbers[message.id] = message.magic
+
+    if (msgIDSet.has(message.id)) {
+      console.log('same message found', message.id, message.name);
+    }
+    msgIDSet.add(message.id);
   })
 
   // generate message classes
@@ -449,7 +473,8 @@ function generate(name: string, obj: any, output: Writter) {
 }
 
 async function main() {
-  const parts = [ 'minimal', 'common', 'ardupilotmega', 'uavionix', 'icarous' ]
+  const parts = [ 'minimal', 'common', 'ardupilotmega', 'uavionix', 'icarous',
+    'ASLUAV', 'AVSSUAS', 'storm32', 'ualberta', 'development' ]
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
@@ -464,6 +489,7 @@ async function main() {
     const data = await parser.parseStringPromise(xml.toString(), { explicitChildren: true, preserveChildrenOrder: true })
     const output = new Writter()
     output.write(imports.toString())
+    console.log('file: ' + part);
     generate(part, data, output)
     fs.writeFileSync(`./lib/${part}.ts`, output.lines.join('\n'))
   }
