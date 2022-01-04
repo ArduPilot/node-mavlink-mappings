@@ -110,130 +110,130 @@ function generate(name: string, obj: any, output: Writter) {
   // ------------------------------------------------------------------------
 
   // parse XML data
-
-  const enums = obj.mavlink.enums[0].enum.map(xml => ({
-    name: makeClassName(xml.$.name),
-    source: {
-      name: xml.$.name,
-    },
-    description: xml.description?.join(' ') || '',
-    values: xml.entry.map(xml => ({
+  if (obj.mavlink.enums[0]?.enum) {
+    const enums = obj.mavlink.enums[0].enum.map(xml => ({
+      name: makeClassName(xml.$.name),
       source: {
         name: xml.$.name,
-        value: xml.$.value,
       },
       description: xml.description?.join(' ') || '',
+      values: xml.entry.map(xml => ({
+        source: {
+          name: xml.$.name,
+          value: xml.$.value,
+        },
+        description: xml.description?.join(' ') || '',
+      }))
     }))
-  }))
 
-  // preprocess description of enum to match 100 characters per line
-  enums.forEach((entry) => {
-    entry.description = matchTextToWidth(entry.description)
-  })
-
-  // preprocess description of values to match 100 characters per line
-  enums.forEach(entry => {
-    entry.values.forEach(value => {
-      value.description = matchTextToWidth(value.description)
-    })
-  })
-
-  // calculate common prefix for enum values (needed later to trim the common part and make the enum values shorter)
-  enums.forEach(entry => {
-    entry.source.commonPrefix = entry.values
-      .map(entry => entry.source.name)
-      .reduce((acc, name) => {
-        if (acc === '') {
-          return name
-        } else {
-          for (let i = 0; i < Math.min(acc.length, name.length); i++) {
-            if (acc[i] !== name[i]) return acc.substr(0, i)
-         }
-        }
-        return acc
-      }, '')
-
-    // trim the common prefix so that it ends with an underscore
-    while (!entry.source.commonPrefix.endsWith('_') && entry.source.commonPrefix.length > 0) {
-      entry.source.commonPrefix = entry.source.commonPrefix.substr(0, entry.source.commonPrefix.length - 1)
-    }
-
-    // if the common prefix is contains parts of the value revert to source enum name
-    if (entry.source.commonPrefix.startsWith(entry.source.name) && entry.source.commonPrefix.length > entry.source.name.length + 1) {
-      entry.source.commonPrefix = entry.source.name + '_'
-    }
-
-    // if the common prefix is empty revert to source enum name
-    if (entry.source.commonPrefix === '') {
-      entry.source.commonPrefix = entry.source.name + '_'
-    }
-  })
-
-  // compute value name based on the source name and common prefix
-  enums.forEach(entry => {
-    // initialize the name from xml source
-    entry.values.forEach(value => {
-      value.name = value.source.name
+    // preprocess description of enum to match 100 characters per line
+    enums.forEach((entry) => {
+      entry.description = matchTextToWidth(entry.description)
     })
 
-    // trim the common prefix
-    for (let i = 0; i < 2; i++) {
+    // preprocess description of values to match 100 characters per line
+    enums.forEach(entry => {
       entry.values.forEach(value => {
-        if (value.name.startsWith(entry.source.commonPrefix)) {
-          value.name = value.name.substr(entry.source.commonPrefix.length, 255)
+        value.description = matchTextToWidth(value.description)
+      })
+    })
+
+    // calculate common prefix for enum values (needed later to trim the common part and make the enum values shorter)
+    enums.forEach(entry => {
+      entry.source.commonPrefix = entry.values
+        .map(entry => entry.source.name)
+        .reduce((acc, name) => {
+          if (acc === '') {
+            return name
+          } else {
+            for (let i = 0; i < Math.min(acc.length, name.length); i++) {
+              if (acc[i] !== name[i]) return acc.substr(0, i)
+          }
+          }
+          return acc
+        }, '')
+
+      // trim the common prefix so that it ends with an underscore
+      while (!entry.source.commonPrefix.endsWith('_') && entry.source.commonPrefix.length > 0) {
+        entry.source.commonPrefix = entry.source.commonPrefix.substr(0, entry.source.commonPrefix.length - 1)
+      }
+
+      // if the common prefix is contains parts of the value revert to source enum name
+      if (entry.source.commonPrefix.startsWith(entry.source.name) && entry.source.commonPrefix.length > entry.source.name.length + 1) {
+        entry.source.commonPrefix = entry.source.name + '_'
+      }
+
+      // if the common prefix is empty revert to source enum name
+      if (entry.source.commonPrefix === '') {
+        entry.source.commonPrefix = entry.source.name + '_'
+      }
+    })
+
+    // compute value name based on the source name and common prefix
+    enums.forEach(entry => {
+      // initialize the name from xml source
+      entry.values.forEach(value => {
+        value.name = value.source.name
+      })
+
+      // trim the common prefix
+      for (let i = 0; i < 2; i++) {
+        entry.values.forEach(value => {
+          if (value.name.startsWith(entry.source.commonPrefix)) {
+            value.name = value.name.substr(entry.source.commonPrefix.length, 255)
+          }
+        })
+      }
+
+      // if the trimmed value starts with a digit revert to xml source
+      entry.values.forEach(value => {
+        if ([ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ].includes(value.name[0])) {
+          value.name = value.source.name
         }
       })
-    }
+    })
 
-    // if the trimmed value starts with a digit revert to xml source
-    entry.values.forEach(value => {
-      if ([ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ].includes(value.name[0])) {
-        value.name = value.source.name
+    // compute enum value
+    enums.forEach(entry => {
+      entry.values.forEach(value => {
+        value.value = value.source.value
+      })
+    })
+
+    // compute max length of value name for later padding values
+    const maxValueNameLength = enums.reduce((acc, entry) => {
+      const maxLength = entry.values.reduce((acc, value) => Math.max(acc, value.name.length), 0)
+      return Math.max(acc, maxLength)
+    }, 0)
+
+    // generate enums
+    enums.forEach(entry => {
+      output.write('')
+      // generate enum description
+      output.write('/**')
+      if (entry.description.length > 0) {
+        output.write(` * ${entry.description.join('\n * ')}`)
+      } else {
+        output.write(` * ${entry.source.name}`)
       }
+      output.write(' */')
+
+      // generate enum declaration
+      output.write(`export enum ${entry.name} {`)
+
+      // generate enum values
+      entry.values.forEach(value => {
+        if (value.description.length > 1) {
+          output.write('  /**')
+          output.write(`   * ${value.description.join('\n   * ')}`)
+          output.write('   */')
+        }
+        const padding = ''.padEnd(maxValueNameLength - value.name.length, ' ')
+        output.write(`  '${value.name}'${padding} = ${value.value},`)
+      })
+      output.write(`}`)
     })
-  })
-
-  // compute enum value
-  enums.forEach(entry => {
-    entry.values.forEach(value => {
-      value.value = value.source.value
-    })
-  })
-
-  // compute max length of value name for later padding values
-  const maxValueNameLength = enums.reduce((acc, entry) => {
-    const maxLength = entry.values.reduce((acc, value) => Math.max(acc, value.name.length), 0)
-    return Math.max(acc, maxLength)
-  }, 0)
-
-  // generate enums
-  enums.forEach(entry => {
-    output.write('')
-    // generate enum description
-    output.write('/**')
-    if (entry.description.length > 0) {
-      output.write(` * ${entry.description.join('\n * ')}`)
-    } else {
-      output.write(` * ${entry.source.name}`)
-    }
-    output.write(' */')
-
-    // generate enum declaration
-    output.write(`export enum ${entry.name} {`)
-
-    // generate enum values
-    entry.values.forEach(value => {
-      if (value.description.length > 1) {
-        output.write('  /**')
-        output.write(`   * ${value.description.join('\n   * ')}`)
-        output.write('   */')
-      }
-      const padding = ''.padEnd(maxValueNameLength - value.name.length, ' ')
-      output.write(`  '${value.name}'${padding} = ${value.value},`)
-    })
-    output.write(`}`)
-  })
-
+  }
   // ------------------------------------------------------------------------
   // MESSAGES
   // ------------------------------------------------------------------------
@@ -452,7 +452,7 @@ function generate(name: string, obj: any, output: Writter) {
 }
 
 async function main() {
-  const parts = [ 'minimal', 'common', 'ardupilotmega', 'uavionix', 'icarous', 'asluav', 'development', 'matrixpilot' ]
+  const parts = [ 'minimal', 'common', 'ardupilotmega', 'uavionix', 'icarous', 'asluav', 'development', 'matrixpilot', 'paparazzi' ]
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]

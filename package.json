@@ -1,6 +1,6 @@
 {
   "name": "mavlink-mappings",
-  "version": "1.0.4-20220104",
+  "version": "1.0.5-20220104",
   "author": "Matthias Hryniszak <padcom@gmail.com>",
   "license": "LGPL",
   "description": "MavLink message definitions",
@@ -33,7 +33,8 @@
     "get:asluav": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/ASLUAV.xml -O asluav.xml",
     "get:development": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/development.xml -O development.xml",
     "get:matrixpilot": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/matrixpilot.xml -O matrixpilot.xml",
-    "regenerate": "npm run get:minimal && npm run get:common && npm run get:ardupilotmega && npm run get:uavionix && npm run get:icarous && npm run get:asluav && npm run get:development && npm run get:matrixpilot && npm run code-generator && npm run transpile"
+    "get:paparazzi": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/paparazzi.xml -O paparazzi.xml",
+    "regenerate": "npm run get:minimal && npm run get:common && npm run get:ardupilotmega && npm run get:uavionix && npm run get:icarous && npm run get:asluav && npm run get:development && npm run get:matrixpilot && npm run get:paparazzi && npm run code-generator && npm run transpile"
   },
   "devDependencies": {
     "@types/node": "^15.0.1",
