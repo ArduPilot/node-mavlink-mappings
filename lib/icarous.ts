@@ -86,10 +86,12 @@ export class IcarousKinematicBands extends MavLinkData {
   type1: IcarousTrackBandTypes
   /**
    * min angle (degrees)
+   * Unit: deg
    */
   min1: float
   /**
    * max angle (degrees)
+   * Unit: deg
    */
   max1: float
   /**
@@ -98,10 +100,12 @@ export class IcarousKinematicBands extends MavLinkData {
   type2: IcarousTrackBandTypes
   /**
    * min angle (degrees)
+   * Unit: deg
    */
   min2: float
   /**
    * max angle (degrees)
+   * Unit: deg
    */
   max2: float
   /**
@@ -110,10 +114,12 @@ export class IcarousKinematicBands extends MavLinkData {
   type3: IcarousTrackBandTypes
   /**
    * min angle (degrees)
+   * Unit: deg
    */
   min3: float
   /**
    * max angle (degrees)
+   * Unit: deg
    */
   max3: float
   /**
@@ -122,10 +128,12 @@ export class IcarousKinematicBands extends MavLinkData {
   type4: IcarousTrackBandTypes
   /**
    * min angle (degrees)
+   * Unit: deg
    */
   min4: float
   /**
    * max angle (degrees)
+   * Unit: deg
    */
   max4: float
   /**
@@ -134,10 +142,12 @@ export class IcarousKinematicBands extends MavLinkData {
   type5: IcarousTrackBandTypes
   /**
    * min angle (degrees)
+   * Unit: deg
    */
   min5: float
   /**
    * max angle (degrees)
+   * Unit: deg
    */
   max5: float
 }

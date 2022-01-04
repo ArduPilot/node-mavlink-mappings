@@ -428,9 +428,12 @@ function generate(name: string, obj: any, output: Writter) {
 
     // generate fields
     message.fields.forEach(field => {
-      if (field.description.length > 0) {
+      if (field.description.length > 0 || field.units) {
         output.write('  /**')
         output.write(`   * ${field.description.join('\n   * ')}`)
+        if (field.units) {
+          output.write(`   * Units: ${field.units}`)
+        }
         output.write('   */')
       }
       output.write(`  ${field.name}: ${field.type}`)

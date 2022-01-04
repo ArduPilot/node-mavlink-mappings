@@ -163,6 +163,7 @@ export class UavionixAdsbOutCfg extends MavLinkData {
   gpsOffsetLon: UavionixAdsbOutCfgGpsOffsetLon
   /**
    * Aircraft stall speed in cm/s
+   * Unit: cm/s
    */
   stallSpeed: uint16_t
   /**
@@ -201,18 +202,22 @@ export class UavionixAdsbOutDynamic extends MavLinkData {
 
   /**
    * UTC time in seconds since GPS epoch (Jan 6, 1980). If unknown set to UINT32_MAX
+   * Unit: s
    */
   utcTime: uint32_t
   /**
    * Latitude WGS84 (deg * 1E7). If unknown set to INT32_MAX
+   * Unit: degE7
    */
   gpsLat: int32_t
   /**
    * Longitude WGS84 (deg * 1E7). If unknown set to INT32_MAX
+   * Unit: degE7
    */
   gpsLon: int32_t
   /**
    * Altitude (WGS84). UP +ve. If unknown set to INT32_MAX
+   * Unit: mm
    */
   gpsAlt: int32_t
   /**
@@ -226,30 +231,37 @@ export class UavionixAdsbOutDynamic extends MavLinkData {
   /**
    * Barometric pressure altitude (MSL) relative to a standard atmosphere of 1013.2 mBar and NOT bar
    * corrected altitude (m * 1E-3). (up +ve). If unknown set to INT32_MAX
+   * Unit: mbar
    */
   baroAltMSL: int32_t
   /**
    * Horizontal accuracy in mm (m * 1E-3). If unknown set to UINT32_MAX
+   * Unit: mm
    */
   accuracyHor: uint32_t
   /**
    * Vertical accuracy in cm. If unknown set to UINT16_MAX
+   * Unit: cm
    */
   accuracyVert: uint16_t
   /**
    * Velocity accuracy in mm/s (m * 1E-3). If unknown set to UINT16_MAX
+   * Unit: mm/s
    */
   accuracyVel: uint16_t
   /**
    * GPS vertical speed in cm/s. If unknown set to INT16_MAX
+   * Unit: cm/s
    */
   velVert: int16_t
   /**
    * North-South velocity over ground in cm/s North +ve. If unknown set to INT16_MAX
+   * Unit: cm/s
    */
   velNS: int16_t
   /**
    * East-West velocity over ground in cm/s East +ve. If unknown set to INT16_MAX
+   * Unit: cm/s
    */
   VelEW: int16_t
   /**
