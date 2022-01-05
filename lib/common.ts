@@ -656,7 +656,7 @@ export enum AutotuneAxis {
   'DEFAULT'                                        = 0,
   'ROLL'                                           = 1,
   'PITCH'                                          = 2,
-  'YAW'                                            = 3,
+  'YAW'                                            = 4,
 }
 
 /**

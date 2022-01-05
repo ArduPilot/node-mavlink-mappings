@@ -35,11 +35,12 @@
     "get:matrixpilot": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/matrixpilot.xml -O matrixpilot.xml",
     "get:paparazzi": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/paparazzi.xml -O paparazzi.xml",
     "get:ualberta": "nwget https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/ualberta.xml -O ualberta.xml",
-    "regenerate": "npm run get:minimal && npm run get:common && npm run get:ardupilotmega && npm run get:uavionix && npm run get:icarous && npm run get:asluav && npm run get:development && npm run get:matrixpilot && npm run get:paparazzi && npm run get:ualberta && npm run code-generator && npm run transpile"
+    "regenerate": "npm-run-all -p 'get:*' && npm run code-generator && npm run transpile"
   },
   "devDependencies": {
     "@types/node": "^15.0.1",
     "@types/xml2js": "^0.4.8",
+    "npm-run-all": "^4.1.5",
     "ts-node": "^9.1.1",
     "typescript": "^4.4.3",
     "wget-improved": "^3.2.1",
