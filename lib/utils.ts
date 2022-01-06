@@ -1,6 +1,8 @@
 export function x25crc(buffer: Buffer, start = 0, trim = 0, magic = null) {
   let crc = 0xffff;
 
+  console.log('x25crc: buffer.length', buffer.length)
+
   for (let i = start; i < buffer.length - trim; i++) {
     const byte = buffer[i]
     let tmp = (byte & 0xff) ^ (crc & 0xff);
@@ -21,17 +23,21 @@ export function x25crc(buffer: Buffer, start = 0, trim = 0, magic = null) {
   return crc;
 }
 
+export function hex(n: number, len: number = 2, prefix = '0x') {
+  return `${prefix}${n.toString(16).padStart(len, '0')}`
+}
+
 export function dump(buffer: Buffer, lineWidth = 28) {
   const line = []
   for (let i = 0; i < buffer.length; i++) {
-    line.push(buffer[i].toString(16).padStart(2, '0') + ' ')
+    line.push(hex(buffer[i], 2))
     if (line.length === lineWidth) {
       console.log(line.join(' '))
       line.length = 0
     }
   }
   if (line.length > 0) {
-    console.log(line.join(' '))
+    console.log(line.join(''))
   }
 }
 

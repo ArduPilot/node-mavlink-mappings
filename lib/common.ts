@@ -441,6 +441,36 @@ export enum WinchActions {
   'RELAXED'                                        = 0,
   'RELATIVE_LENGTH_CONTROL'                        = 1,
   'RATE_CONTROL'                                   = 2,
+  /**
+   * Perform the locking sequence to relieve motor while in the fully retracted position. Only action and
+   * instance command parameters are used, others are ignored.
+   */
+  'LOCK'                                           = 3,
+  /**
+   * Sequence of drop, slow down, touch down, reel up, lock. Only action and instance command parameters
+   * are used, others are ignored.
+   */
+  'DELIVER'                                        = 4,
+  /**
+   * Engage motor and hold current position. Only action and instance command parameters are used, others
+   * are ignored.
+   */
+  'HOLD'                                           = 5,
+  /**
+   * Return the reel to the fully retracted position. Only action and instance command parameters are
+   * used, others are ignored.
+   */
+  'RETRACT'                                        = 6,
+  /**
+   * Load the reel with line. The winch will calculate the total loaded length and stop when the tension
+   * exceeds a threshold. Only action and instance command parameters are used, others are ignored.
+   */
+  'LOAD_LINE'                                      = 7,
+  /**
+   * Spool out the entire length of the line. Only action and instance command parameters are used,
+   * others are ignored.
+   */
+  'ABANDON_LINE'                                   = 8,
 }
 
 /**
@@ -2564,6 +2594,21 @@ export enum MavWinchStatusFlag {
   'FULLY_RETRACTED'                                = 2,
   'MOVING'                                         = 4,
   'CLUTCH_ENGAGED'                                 = 8,
+  'LOCKED'                                         = 16,
+  'DROPPING'                                       = 32,
+  'ARRESTING'                                      = 64,
+  'GROUND_SENSE'                                   = 128,
+  'RETRACTING'                                     = 256,
+  /**
+   * Winch is redelivering the payload. This is a failover state if the line tension goes above a
+   * threshold during RETRACTING.
+   */
+  'REDELIVER'                                      = 512,
+  /**
+   * Winch is abandoning the line and possibly payload. Winch unspools the entire calculated line length.
+   * This is a failover state from REDELIVER if the number of attemps exceeds a threshold.
+   */
+  'ABANDON_LINE'                                   = 1024,
 }
 
 /**
