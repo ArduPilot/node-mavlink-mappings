@@ -1,10 +1,7 @@
 export function x25crc(buffer: Buffer, start = 0, trim = 0, magic = null) {
   let crc = 0xffff;
 
-  console.log('x25crc: buffer.length', buffer.length)
-
-  for (let i = start; i < buffer.length - trim; i++) {
-    const byte = buffer[i]
+  const digest = byte => {
     let tmp = (byte & 0xff) ^ (crc & 0xff);
     tmp ^= tmp << 4;
     tmp &= 0xff;
@@ -12,12 +9,12 @@ export function x25crc(buffer: Buffer, start = 0, trim = 0, magic = null) {
     crc &= 0xffff;
   }
 
+  for (let i = start; i < buffer.length - trim; i++) {
+    digest(buffer[i])
+  }
+
   if (magic !== null) {
-    let tmp = (magic & 0xff) ^ (crc & 0xff);
-    tmp ^= tmp << 4;
-    tmp &= 0xff;
-    crc = (crc >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4);
-    crc &= 0xffff;
+    digest(magic)
   }
 
   return crc;
@@ -27,17 +24,19 @@ export function hex(n: number, len: number = 2, prefix = '0x') {
   return `${prefix}${n.toString(16).padStart(len, '0')}`
 }
 
-export function dump(buffer: Buffer, lineWidth = 28) {
+export function dump(buffer: Buffer, lineWidth = 16) {
   const line = []
+  let address = 0
   for (let i = 0; i < buffer.length; i++) {
-    line.push(hex(buffer[i], 2))
+    line.push(hex(buffer[i], 2, '0x'))
     if (line.length === lineWidth) {
-      console.log(line.join(' '))
+      console.log(hex(address, 4), '|', line.join(' '))
+      address += lineWidth
       line.length = 0
     }
   }
   if (line.length > 0) {
-    console.log(line.join(''))
+    console.log(hex(address, 4), '|', line.join(' '))
   }
 }
 
