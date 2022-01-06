@@ -6,7 +6,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -163,7 +163,7 @@ export class UalbertaSysStatus extends MavLinkData {
   pilot: uint8_t
 }
 
-export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
+export const REGISTRY: MavLinkPacketRegistry = {
   220: NavFilterBias,
   221: RadioCalibration,
   222: UalbertaSysStatus,

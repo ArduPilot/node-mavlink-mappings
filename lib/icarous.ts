@@ -4,7 +4,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -153,7 +153,7 @@ export class IcarousKinematicBands extends MavLinkData {
   max5: float
 }
 
-export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
+export const REGISTRY: MavLinkPacketRegistry = {
   42000: IcarousHeartbeat,
   42001: IcarousKinematicBands,
 }

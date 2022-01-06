@@ -6,7 +6,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -731,7 +731,7 @@ export class ProtocolVersion extends MavLinkData {
   libraryVersionHash: uint8_t[]
 }
 
-export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
+export const REGISTRY: MavLinkPacketRegistry = {
   0: Heartbeat,
   300: ProtocolVersion,
 }

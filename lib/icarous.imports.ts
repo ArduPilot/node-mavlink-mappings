@@ -4,7 +4,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'

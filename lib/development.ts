@@ -8,7 +8,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -460,7 +460,7 @@ export class GroupEnd extends MavLinkData {
   timeUsec: uint64_t
 }
 
-export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
+export const REGISTRY: MavLinkPacketRegistry = {
   19: ParamAckTransaction,
   52: MissionChanged,
   53: MissionChecksum,

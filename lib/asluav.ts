@@ -9,7 +9,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -1230,7 +1230,7 @@ export class SensorAirflowAngles extends MavLinkData {
   sideslipValid: uint8_t
 }
 
-export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
+export const REGISTRY: MavLinkPacketRegistry = {
   223: CommandIntStamped,
   224: CommandLongStamped,
   8002: SensPower,

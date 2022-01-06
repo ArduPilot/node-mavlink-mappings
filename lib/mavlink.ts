@@ -1,9 +1,3 @@
-interface MavLinkSourceFieldDefinition {
-  name: string
-  type: string
-  enum: string
-}
-
 /**
  * Field definition
  */
@@ -64,3 +58,9 @@ export interface MavLinkDataConstructor<T extends MavLinkData> {
 
   new (): T
 }
+
+/**
+ * Type describing a registry binding together all packets
+ */
+export type MavLinkPacketRegistry = { [x: number]: MavLinkDataConstructor<MavLinkData> }
+

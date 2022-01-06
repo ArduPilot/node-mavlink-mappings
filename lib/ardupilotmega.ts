@@ -11,7 +11,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -3775,7 +3775,7 @@ export class McuStatus extends MavLinkData {
   MCUVoltageMax: uint16_t
 }
 
-export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
+export const REGISTRY: MavLinkPacketRegistry = {
   150: SensorOffsets,
   151: SetMagOffsets,
   152: MemInfo,

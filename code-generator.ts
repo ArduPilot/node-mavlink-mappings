@@ -2,7 +2,7 @@
 
 import * as fs from 'fs'
 import * as parser from 'xml2js'
-import { x25crc, dump } from './lib/utils'
+import { x25crc } from './lib/utils'
 
 const snakeToCamel = s => s.replace(/([-_]\w)/g, g => g[1].toUpperCase());
 
@@ -443,7 +443,7 @@ function generate(name: string, obj: any, output: Writter) {
 
   // generate message registry
   output.write()
-  output.write(`export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {`)
+  output.write(`export const REGISTRY: MavLinkPacketRegistry = {`)
   messages.forEach(message => {
     output.write(`  ${message.id}: ${message.name},`)
   })

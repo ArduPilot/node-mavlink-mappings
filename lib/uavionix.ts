@@ -7,7 +7,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -298,7 +298,7 @@ export class UavionixAdsbTransceiverHealthReport extends MavLinkData {
   rfHealth: UavionixAdsbRfHealth
 }
 
-export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
+export const REGISTRY: MavLinkPacketRegistry = {
   10001: UavionixAdsbOutCfg,
   10002: UavionixAdsbOutDynamic,
   10003: UavionixAdsbTransceiverHealthReport,

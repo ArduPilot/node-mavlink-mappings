@@ -13,7 +13,7 @@ import {
 } from './types'
 
 import {
-  MavLinkDataConstructor,
+  MavLinkPacketRegistry,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -15961,7 +15961,7 @@ export class HygrometerSensor extends MavLinkData {
   humidity: uint16_t
 }
 
-export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
+export const REGISTRY: MavLinkPacketRegistry = {
   1: SysStatus,
   2: SystemTime,
   4: Ping,
