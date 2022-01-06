@@ -1,7 +1,14 @@
+interface MavLinkSourceFieldDefinition {
+  name: string
+  type: string
+  enum: string
+}
+
 /**
  * Field definition
  */
 export class MavLinkPacketField {
+  readonly source: string
   readonly name: string
   readonly type: string
   readonly length: number
@@ -11,6 +18,7 @@ export class MavLinkPacketField {
   readonly units: string
 
   /**
+   * @param source original name of the field
    * @param name name of the field
    * @param offset field offset in the payload
    * @param extension true if it is an extension field, false otherwise
@@ -19,7 +27,8 @@ export class MavLinkPacketField {
    * @param units unit of the field
    * @param length for array fields this is the length of the array
    */
-  constructor(name: string, offset: number, extension: boolean, size: number, type: string, units: string, length = 0) {
+  constructor(source: string, name: string, offset: number, extension: boolean, size: number, type: string, units: string, length = 0) {
+    this.source = source
     this.name = name
     this.offset = offset
     this.type = type

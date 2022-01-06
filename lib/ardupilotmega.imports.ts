@@ -11,6 +11,7 @@ import {
 } from './types'
 
 import {
+  MavLinkDataConstructor,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'

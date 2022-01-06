@@ -7,6 +7,7 @@ import {
 } from './types'
 
 import {
+  MavLinkDataConstructor,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -126,14 +127,14 @@ export class UavionixAdsbOutCfg extends MavLinkData {
   static MAGIC_NUMBER = 209
 
   static FIELDS = [
-    new MavLinkPacketField('ICAO', 0, false, 4, 'uint32_t', ''),
-    new MavLinkPacketField('stallSpeed', 4, false, 2, 'uint16_t', 'cm/s'),
-    new MavLinkPacketField('callsign', 6, false, 1, 'char[]', '', 9),
-    new MavLinkPacketField('emitterType', 15, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('aircraftSize', 16, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('gpsOffsetLat', 17, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('gpsOffsetLon', 18, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('rfSelect', 19, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('ICAO', 'ICAO', 0, false, 4, 'uint32_t', ''),
+    new MavLinkPacketField('stallSpeed', 'stallSpeed', 4, false, 2, 'uint16_t', 'cm/s'),
+    new MavLinkPacketField('callsign', 'callsign', 6, false, 1, 'char[]', '', 9),
+    new MavLinkPacketField('emitterType', 'emitterType', 15, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('aircraftSize', 'aircraftSize', 16, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('gpsOffsetLat', 'gpsOffsetLat', 17, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('gpsOffsetLon', 'gpsOffsetLon', 18, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rfSelect', 'rfSelect', 19, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -182,22 +183,22 @@ export class UavionixAdsbOutDynamic extends MavLinkData {
   static MAGIC_NUMBER = 186
 
   static FIELDS = [
-    new MavLinkPacketField('utcTime', 0, false, 4, 'uint32_t', 's'),
-    new MavLinkPacketField('gpsLat', 4, false, 4, 'int32_t', 'degE7'),
-    new MavLinkPacketField('gpsLon', 8, false, 4, 'int32_t', 'degE7'),
-    new MavLinkPacketField('gpsAlt', 12, false, 4, 'int32_t', 'mm'),
-    new MavLinkPacketField('baroAltMSL', 16, false, 4, 'int32_t', 'mbar'),
-    new MavLinkPacketField('accuracyHor', 20, false, 4, 'uint32_t', 'mm'),
-    new MavLinkPacketField('accuracyVert', 24, false, 2, 'uint16_t', 'cm'),
-    new MavLinkPacketField('accuracyVel', 26, false, 2, 'uint16_t', 'mm/s'),
-    new MavLinkPacketField('velVert', 28, false, 2, 'int16_t', 'cm/s'),
-    new MavLinkPacketField('velNS', 30, false, 2, 'int16_t', 'cm/s'),
-    new MavLinkPacketField('VelEW', 32, false, 2, 'int16_t', 'cm/s'),
-    new MavLinkPacketField('state', 34, false, 2, 'uint16_t', ''),
-    new MavLinkPacketField('squawk', 36, false, 2, 'uint16_t', ''),
-    new MavLinkPacketField('gpsFix', 38, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('numSats', 39, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('emergencyStatus', 40, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('utcTime', 'utcTime', 0, false, 4, 'uint32_t', 's'),
+    new MavLinkPacketField('gpsLat', 'gpsLat', 4, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('gpsLon', 'gpsLon', 8, false, 4, 'int32_t', 'degE7'),
+    new MavLinkPacketField('gpsAlt', 'gpsAlt', 12, false, 4, 'int32_t', 'mm'),
+    new MavLinkPacketField('baroAltMSL', 'baroAltMSL', 16, false, 4, 'int32_t', 'mbar'),
+    new MavLinkPacketField('accuracyHor', 'accuracyHor', 20, false, 4, 'uint32_t', 'mm'),
+    new MavLinkPacketField('accuracyVert', 'accuracyVert', 24, false, 2, 'uint16_t', 'cm'),
+    new MavLinkPacketField('accuracyVel', 'accuracyVel', 26, false, 2, 'uint16_t', 'mm/s'),
+    new MavLinkPacketField('velVert', 'velVert', 28, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('velNS', 'velNS', 30, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('VelEW', 'VelEW', 32, false, 2, 'int16_t', 'cm/s'),
+    new MavLinkPacketField('state', 'state', 34, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('squawk', 'squawk', 36, false, 2, 'uint16_t', ''),
+    new MavLinkPacketField('gpsFix', 'gpsFix', 38, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('numSats', 'numSats', 39, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('emergencyStatus', 'emergencyStatus', 40, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -288,7 +289,7 @@ export class UavionixAdsbTransceiverHealthReport extends MavLinkData {
   static MAGIC_NUMBER = 4
 
   static FIELDS = [
-    new MavLinkPacketField('rfHealth', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('rfHealth', 'rfHealth', 0, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -297,7 +298,7 @@ export class UavionixAdsbTransceiverHealthReport extends MavLinkData {
   rfHealth: UavionixAdsbRfHealth
 }
 
-export const REGISTRY = {
+export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
   10001: UavionixAdsbOutCfg,
   10002: UavionixAdsbOutDynamic,
   10003: UavionixAdsbTransceiverHealthReport,

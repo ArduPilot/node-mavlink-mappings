@@ -6,6 +6,7 @@ import {
 } from './types'
 
 import {
+  MavLinkDataConstructor,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -50,13 +51,13 @@ export class NavFilterBias extends MavLinkData {
   static MAGIC_NUMBER = 34
 
   static FIELDS = [
-    new MavLinkPacketField('usec', 0, false, 8, 'uint64_t', ''),
-    new MavLinkPacketField('accel0', 8, false, 4, 'float', ''),
-    new MavLinkPacketField('accel1', 12, false, 4, 'float', ''),
-    new MavLinkPacketField('accel2', 16, false, 4, 'float', ''),
-    new MavLinkPacketField('gyro0', 20, false, 4, 'float', ''),
-    new MavLinkPacketField('gyro1', 24, false, 4, 'float', ''),
-    new MavLinkPacketField('gyro2', 28, false, 4, 'float', ''),
+    new MavLinkPacketField('usec', 'usec', 0, false, 8, 'uint64_t', ''),
+    new MavLinkPacketField('accel_0', 'accel0', 8, false, 4, 'float', ''),
+    new MavLinkPacketField('accel_1', 'accel1', 12, false, 4, 'float', ''),
+    new MavLinkPacketField('accel_2', 'accel2', 16, false, 4, 'float', ''),
+    new MavLinkPacketField('gyro_0', 'gyro0', 20, false, 4, 'float', ''),
+    new MavLinkPacketField('gyro_1', 'gyro1', 24, false, 4, 'float', ''),
+    new MavLinkPacketField('gyro_2', 'gyro2', 28, false, 4, 'float', ''),
   ]
 
   /**
@@ -99,12 +100,12 @@ export class RadioCalibration extends MavLinkData {
   static MAGIC_NUMBER = 71
 
   static FIELDS = [
-    new MavLinkPacketField('aileron', 0, false, 2, 'uint16_t[]', '', 3),
-    new MavLinkPacketField('elevator', 6, false, 2, 'uint16_t[]', '', 3),
-    new MavLinkPacketField('rudder', 12, false, 2, 'uint16_t[]', '', 3),
-    new MavLinkPacketField('gyro', 18, false, 2, 'uint16_t[]', '', 2),
-    new MavLinkPacketField('pitch', 22, false, 2, 'uint16_t[]', '', 5),
-    new MavLinkPacketField('throttle', 32, false, 2, 'uint16_t[]', '', 5),
+    new MavLinkPacketField('aileron', 'aileron', 0, false, 2, 'uint16_t[]', '', 3),
+    new MavLinkPacketField('elevator', 'elevator', 6, false, 2, 'uint16_t[]', '', 3),
+    new MavLinkPacketField('rudder', 'rudder', 12, false, 2, 'uint16_t[]', '', 3),
+    new MavLinkPacketField('gyro', 'gyro', 18, false, 2, 'uint16_t[]', '', 2),
+    new MavLinkPacketField('pitch', 'pitch', 22, false, 2, 'uint16_t[]', '', 5),
+    new MavLinkPacketField('throttle', 'throttle', 32, false, 2, 'uint16_t[]', '', 5),
   ]
 
   /**
@@ -143,9 +144,9 @@ export class UalbertaSysStatus extends MavLinkData {
   static MAGIC_NUMBER = 15
 
   static FIELDS = [
-    new MavLinkPacketField('mode', 0, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('navMode', 1, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('pilot', 2, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('mode', 'mode', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('nav_mode', 'navMode', 1, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('pilot', 'pilot', 2, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -162,7 +163,7 @@ export class UalbertaSysStatus extends MavLinkData {
   pilot: uint8_t
 }
 
-export const REGISTRY = {
+export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
   220: NavFilterBias,
   221: RadioCalibration,
   222: UalbertaSysStatus,

@@ -4,6 +4,7 @@ import {
 } from './types'
 
 import {
+  MavLinkDataConstructor,
   MavLinkPacketField,
   MavLinkData
 } from './mavlink'
@@ -39,7 +40,7 @@ export class IcarousHeartbeat extends MavLinkData {
   static MAGIC_NUMBER = 227
 
   static FIELDS = [
-    new MavLinkPacketField('status', 0, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('status', 'status', 0, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -58,22 +59,22 @@ export class IcarousKinematicBands extends MavLinkData {
   static MAGIC_NUMBER = 239
 
   static FIELDS = [
-    new MavLinkPacketField('min1', 0, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('max1', 4, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('min2', 8, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('max2', 12, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('min3', 16, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('max3', 20, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('min4', 24, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('max4', 28, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('min5', 32, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('max5', 36, false, 4, 'float', 'deg'),
-    new MavLinkPacketField('numBands', 40, false, 1, 'int8_t', ''),
-    new MavLinkPacketField('type1', 41, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('type2', 42, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('type3', 43, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('type4', 44, false, 1, 'uint8_t', ''),
-    new MavLinkPacketField('type5', 45, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('min1', 'min1', 0, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('max1', 'max1', 4, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('min2', 'min2', 8, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('max2', 'max2', 12, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('min3', 'min3', 16, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('max3', 'max3', 20, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('min4', 'min4', 24, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('max4', 'max4', 28, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('min5', 'min5', 32, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('max5', 'max5', 36, false, 4, 'float', 'deg'),
+    new MavLinkPacketField('numBands', 'numBands', 40, false, 1, 'int8_t', ''),
+    new MavLinkPacketField('type1', 'type1', 41, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type2', 'type2', 42, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type3', 'type3', 43, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type4', 'type4', 44, false, 1, 'uint8_t', ''),
+    new MavLinkPacketField('type5', 'type5', 45, false, 1, 'uint8_t', ''),
   ]
 
   /**
@@ -152,7 +153,7 @@ export class IcarousKinematicBands extends MavLinkData {
   max5: float
 }
 
-export const REGISTRY = {
+export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {
   42000: IcarousHeartbeat,
   42001: IcarousKinematicBands,
 }

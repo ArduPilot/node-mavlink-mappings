@@ -405,9 +405,9 @@ function generate(name: string, obj: any, output: Writter) {
       .filter(field => !field.extension)
       .forEach(field => {
         if (field.arrayLength) {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', '${field.units}', ${field.arrayLength}),`)
+          output.write(`    new MavLinkPacketField('${field.source.name}', '${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', '${field.units}', ${field.arrayLength}),`)
         } else {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', '${field.units}'),`)
+          output.write(`    new MavLinkPacketField('${field.source.name}', '${field.name}', ${offset}, false, ${field.fieldSize}, '${field.fieldType}', '${field.units}'),`)
         }
         offset += field.size
       })
@@ -417,9 +417,9 @@ function generate(name: string, obj: any, output: Writter) {
       .filter(field => field.extension)
       .forEach(field => {
         if (field.arrayLength) {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', '${field.units}', ${field.arrayLength}),`)
+          output.write(`    new MavLinkPacketField('${field.source.name}', '${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', '${field.units}', ${field.arrayLength}),`)
         } else {
-          output.write(`    new MavLinkPacketField('${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', '${field.units}'),`)
+          output.write(`    new MavLinkPacketField('${field.source.name}', '${field.name}', ${offset}, true, ${field.fieldSize}, '${field.fieldType}', '${field.units}'),`)
         }
         offset += field.size
       })
@@ -443,7 +443,7 @@ function generate(name: string, obj: any, output: Writter) {
 
   // generate message registry
   output.write()
-  output.write(`export const REGISTRY = {`)
+  output.write(`export const REGISTRY: { [x: number]: MavLinkDataConstructor<MavLinkData> } = {`)
   messages.forEach(message => {
     output.write(`  ${message.id}: ${message.name},`)
   })
