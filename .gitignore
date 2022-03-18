@@ -1,3 +1,8 @@
 node_modules
 *.xml
 dist
+lib/*
+!lib/*.imports.ts
+lib/mavlink.ts
+lib/types.ts
+lib/utils.ts

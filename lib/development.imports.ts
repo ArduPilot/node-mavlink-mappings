@@ -16,9 +16,11 @@ import {
 import {
   MavMissionType,
   MavParamType,
-  ParamAck
+  ParamAck,
+  MavProtocolCapability
 } from './common'
 
 import {
-  MavComponent
+  MavComponent,
+  MavModeFlag
 } from './minimal'
