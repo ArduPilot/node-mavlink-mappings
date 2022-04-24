@@ -2,9 +2,10 @@
   "compilerOptions": {
     "module": "commonjs",
     "lib": ["ES2020", "DOM"],
-    "target": "es2015",
+    "target": "es2017",
     "declaration": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "resolveJsonModule": true
   },
   "include": [
     "index.ts",

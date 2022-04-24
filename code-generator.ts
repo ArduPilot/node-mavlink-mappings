@@ -102,8 +102,6 @@ class Writter {
   }
 }
 
-const magicNumbers = {}
-
 function generate(name: string, obj: any, output: Writter) {
   // ------------------------------------------------------------------------
   // ENUMS
@@ -355,14 +353,11 @@ function generate(name: string, obj: any, output: Writter) {
     }
     const crc = x25crc(buffer)
     message.magic = (crc & 0xff) ^ (crc >> 8)
-
-    // put the magic number in global table - the magic-numbers.ts will be generated at the end from it
-    magicNumbers[message.id] = message.magic
   })
 
   // generate message classes
   messages.forEach(message => {
-    output.write('')
+    output.write()
 
     // generate message description
     output.write('/**')
@@ -375,8 +370,10 @@ function generate(name: string, obj: any, output: Writter) {
     // generate deprecation information
     if (message.deprecated) {
       const description = message.deprecated.description ? `; ${message.deprecated.description}` : ''
+      const since = message.deprecated.since || 'unknown'
+      const replacedBy = message.deprecated.replacedBy || 'unknown'
       output.write(` *`)
-      output.write(` * @deprecated since ${message.deprecated.since}, replaced by ${message.deprecated.replacedBy}${description}`)
+      output.write(` * @deprecated since ${since}, replaced by ${replacedBy}${description}`)
     }
 
     output.write(' */')
@@ -451,11 +448,14 @@ function generate(name: string, obj: any, output: Writter) {
   output.write()
 }
 
+import { mappings } from './package.json'
+
 async function main() {
-  const parts = [ 'minimal', 'common', 'ardupilotmega', 'uavionix', 'icarous', 'asluav', 'development', /*'matrixpilot', 'paparazzi',*/ 'ualberta', 'storm32' ]
+  const parts = mappings.map(mapping => mapping.name)
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
+    process.stdout.write(`Generating code for ${part}...`)
     const imports = fs.readFileSync(`lib/${part}.imports.ts`)
     const xml = fs.readFileSync(`${part}.xml`)
     const data = await parser.parseStringPromise(xml.toString(), { explicitChildren: true, preserveChildrenOrder: true })
@@ -463,16 +463,8 @@ async function main() {
     output.write(imports.toString())
     generate(part, data, output)
     fs.writeFileSync(`./lib/${part}.ts`, output.lines.join('\n'))
+    process.stdout.write('done\n')
   }
-
-  // generate magic-numbers.ts
-  const magic = [
-    `export const MSG_ID_MAGIC_NUMBER = {`,
-    ...Object.entries(magicNumbers).map(([msgid, magic]) => `  '${msgid}': ${magic},`, ''),
-    `}`
-  ].join('\n') + '\n'
-
-  fs.writeFileSync('./lib/magic-numbers.ts', magic)
 }
 
 main()

@@ -1,5 +1,4 @@
 import {
-  char,
   int8_t,
   uint8_t,
   int16_t,
