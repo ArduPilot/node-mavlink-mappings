@@ -2,7 +2,7 @@
   "name": "mavlink-mappings",
   "version": "1.0.9-20220424-2",
   "author": "Matthias Hryniszak <padcom@gmail.com>",
-  "license": "LGPL",
+  "license": "LGPL-3.0-or-later",
   "description": "MavLink message definitions",
   "keywords": [
     "mavlink",
