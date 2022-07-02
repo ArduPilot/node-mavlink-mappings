@@ -1,5 +1,6 @@
 import {
   int16_t,
+  int32_t,
   uint8_t,
   uint16_t,
   uint32_t,
@@ -14,6 +15,7 @@ import {
 } from './mavlink'
 
 import {
+  MavFrame,
   MavMissionType,
   MavParamType,
   ParamAck,
