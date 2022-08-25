@@ -30,7 +30,7 @@
     "transpile": "tsc",
     "minimize": "minimize-js dist",
     "regenerate": "npm run download && npm run code-generator && npm run transpile",
-    "prepublishOnly": "npm run clean && npm install && npm run regenerate"
+    "prepublishOnly": "npm install && npm run clean && npm install && npm run regenerate"
   },
   "devDependencies": {
     "@types/xml2js": "^0.4.8",
