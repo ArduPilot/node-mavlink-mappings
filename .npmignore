@@ -2,4 +2,9 @@ node_modules
 *.xml
 test.ts
 code-generator.ts
-./lib
+lib
+!dist/lib
+download.ts
+*.tgz
+*.ts
+tsconfig.json

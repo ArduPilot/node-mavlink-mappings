@@ -102,6 +102,8 @@ class Writter {
   }
 }
 
+const magicNumbers = {}
+
 function generate(name: string, obj: any, output: Writter) {
   // ------------------------------------------------------------------------
   // ENUMS
@@ -353,6 +355,9 @@ function generate(name: string, obj: any, output: Writter) {
     }
     const crc = x25crc(buffer)
     message.magic = (crc & 0xff) ^ (crc >> 8)
+
+    // put the magic number in global table - the magic-numbers.ts will be generated at the end from it
+    magicNumbers[message.id] = message.magic
   })
 
   // generate message classes
@@ -465,6 +470,15 @@ async function main() {
     fs.writeFileSync(`./lib/${part}.ts`, output.lines.join('\n'))
     process.stdout.write('done\n')
   }
+
+  // generate magic-numbers.ts
+  const magic = [
+    `export const MSG_ID_MAGIC_NUMBER = {`,
+    ...Object.entries(magicNumbers).map(([msgid, magic]) => `  '${msgid}': ${magic},`, ''),
+    `}`
+  ].join('\n') + '\n'
+
+  fs.writeFileSync('./lib/magic-numbers.ts', magic)
 }
 
 main()
