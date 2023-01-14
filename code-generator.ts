@@ -223,7 +223,7 @@ function generate(name: string, obj: any, output: Writter) {
 
       // generate enum values
       entry.values.forEach(value => {
-        if (value.description.length > 1) {
+        if (value.description.length > 0) {
           output.write('  /**')
           output.write(`   * ${value.description.join('\n   * ')}`)
           output.write('   */')
