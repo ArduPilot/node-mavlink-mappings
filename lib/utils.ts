@@ -5,7 +5,7 @@
  * import { crc } from 'polycrc'
  * const x25crc = crc(16, 0x1021, 0, 0xffff, false)
  */
- export function x25crc(buffer: Buffer, start = 0, trim = 0, magic = null) {
+ export function x25crc(buffer: Buffer, start = 0, trim = 0, magic: number|null = null) {
   let crc = 0xffff;
 
   const digest = byte => {

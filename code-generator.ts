@@ -93,7 +93,7 @@ function matchTextToWidth(s: string, width = 100) {
 }
 
 class Writter {
-  lines = []
+  lines = [] as string[]
 
   constructor() {}
 
@@ -122,7 +122,12 @@ function generate(name: string, obj: any, output: Writter) {
           name: xml.$.name,
           value: xml.$.value,
         },
-        description: xml.description?.join(' ') || '',
+        description: xml.description?.map(s => String(s))
+          .filter(s => s.trim() !== '[object Object]')
+          .join(' ') || '',
+        params: xml.param || [],
+        hasLocation: Boolean(xml.$.hasLocation || false),
+        isDestination: Boolean(xml.$.isDestination || false),
       }))
     }))
 
@@ -223,9 +228,44 @@ function generate(name: string, obj: any, output: Writter) {
 
       // generate enum values
       entry.values.forEach(value => {
-        if (value.description.length > 0) {
+        const props = [
+          value.hasLocation ? `has location` : '',
+          value.isDestination ? 'is destination' : '',
+        ].filter(s => s)
+
+        if (value.description.length > 0 || value.params.length > 0 || props.length || value.hasLocation || value.isDestination) {
           output.write('  /**')
-          output.write(`   * ${value.description.join('\n   * ')}`)
+          if (value.description.length > 0) {
+            output.write(`   * ${value.description.join('\n   * ')}`)
+          }
+          if (props.length > 0) {
+            if (value.description.length > 0) {
+              output.write(`   *`)
+            }
+            output.write(`   * @note ${props.join(' and ')}`)
+          }
+
+          if (value.params) {
+            const params = value.params as any[]
+            if (value.description.length > 0 || props.length > 0) {
+              output.write(`   *`)
+            }
+            params.forEach(param => {
+              const units = param.$.units ? `[${param.$.units}]` : ''
+              const label = param.$.label ? ` ${param.$.label}` : ''
+              const parts = [
+                param.$.minValue ? `min: ${param.$.minValue}` : '',
+                param.$.maxValue ? `max: ${param.$.maxValue}` : '',
+                param.$.increment ? `increment: ${param.$.increment}` : '',
+              ].filter(s => s).join(', ')
+              const meta = parts ? ` (${parts})` : ''
+              const description = param._ ? ` ${param._}` : ''
+              const content = `${label}${units}${meta}${description}`
+              if (content) {
+                output.write(`   * @param${param.$.index}${content}`)
+              }
+            })
+          }
           output.write('   */')
         }
         const padding = ''.padEnd(maxValueNameLength - value.name.length, ' ')
