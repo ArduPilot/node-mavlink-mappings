@@ -300,7 +300,8 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
     },
     workInProgress: false,
     fields: [],
-  }))
+    wip: Boolean(message.wip)
+  })).filter(x => !x.wip)
 
   // fix some messages because they lack underscore in the original name
   const FIXED_MESSAGE_NAMES = {
@@ -327,6 +328,14 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
   messages.forEach(message => {
     let isExtensionField = false
 
+    const makeEnumField = (fieldType: string, enumName: string) => {
+      if (fieldType.includes('[')) {
+        return `${enumName}[]`
+      } else {
+        return enumName
+      }
+    }
+
     message.source.xml.$$.forEach(item => {
       if (item['#name'] === 'wip') {
         message.workInProgress = true
@@ -345,7 +354,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
           name: snakeToCamel(field.$.name),
           extension: isExtensionField,
           description: field._ || '',
-          type: field.$.enum ? makeClassName(field.$.enum) : extractArrayType(field.$.type),
+          type: field.$.enum ? makeEnumField(field.$.type, makeClassName(field.$.enum)) : extractArrayType(field.$.type),
           arrayLength: extractArraySize(field.$.type),
           size: getTypeSize(field.$.type) * (extractArraySize(field.$.type) || 1),
           fieldType: extractArrayType(field.$.type),
@@ -500,10 +509,18 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
     output.write('')
 
     // generate constructor
-    output.write(`  constructor(targetSystem = 1, targetComponent = 1) {`)
+    output.write(`  constructor() {`)
     output.write(`    super()`)
-    output.write(`    this.targetSystem = targetSystem`)
-    output.write(`    this.targetComponent = targetComponent`)
+    message.fields.forEach(field => {
+      const initValue = field.type.startsWith('char') || field.type === 'string'
+        ? '\'\''
+        : field.type.includes('64')
+          ? 'BigInt(0)'
+          : 0
+      const init = field.arrayLength && field.type !== 'string' ? `[]` : initValue
+
+      output.write(`    this.${field.name} = ${init}`)
+    })
     output.write(`  }`)
 
     // generate fields
@@ -570,6 +587,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
         output.write(`    this.targetSystem = targetSystem`)
         output.write(`    this.targetComponent = targetComponent`)
         output.write(`  }`)
+        output.write(``)
 
         command.params.forEach((param, index) => {
           if (index > 0) output.write()
@@ -581,7 +599,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
               output.write('   *')
             }
 
-            const units = param.$.units ? `[${param.$.units}]` : ''
+            const units = param.$.units ? `${param.$.units}` : ''
             if (units) {
               output.write(`   * @units ${units}`)
             }
