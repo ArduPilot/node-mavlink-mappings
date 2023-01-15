@@ -104,10 +104,12 @@ class Writter {
 
 const magicNumbers = {}
 
-function generate(name: string, obj: any, output: Writter) {
+function generate(name: string, obj: any, output: Writter, moduleName: string = '') {
   // ------------------------------------------------------------------------
   // ENUMS
   // ------------------------------------------------------------------------
+
+  let commandTypes: any = null
 
   // parse XML data
   if (obj.mavlink.enums[0]?.enum) {
@@ -211,6 +213,9 @@ function generate(name: string, obj: any, output: Writter) {
       return Math.max(acc, maxLength)
     }, 0)
 
+    // locate MavCmd enum to generate command classes
+    commandTypes = enums.find(e => e.name === 'MavCmd')
+
     // generate enums
     enums.forEach(entry => {
       output.write('')
@@ -280,7 +285,7 @@ function generate(name: string, obj: any, output: Writter) {
 
   // parse XML data
 
-  const messages = obj.mavlink.messages[0].message.map(message => ({
+  const messages: any[] = obj.mavlink.messages[0].message.map(message => ({
     source: {
       xml: message,
       name: message.$.name,
@@ -400,6 +405,32 @@ function generate(name: string, obj: any, output: Writter) {
     magicNumbers[message.id] = message.magic
   })
 
+  // for CommandInt override the fields
+  const commandInt = messages.find(message => message.name === 'CommandInt')
+  if (commandInt) {
+    // rename fields
+    const FIELDS = [ 'param1', 'param2', 'param3', 'param4', 'x', 'y', 'z']
+    commandInt.fields
+      .filter(field => FIELDS.includes(field.name))
+      .forEach(field => {
+        const MAPPINGS = {
+          'x': 'param5',
+          'y': 'param6',
+          'z': 'param7',
+        }
+        field.name = '_' + (MAPPINGS[field.name] || field.name)
+      })
+  }
+
+  // for CommandLong override the fields
+  const commandLong = messages.find(message => message.name === 'CommandLong')
+  if (commandLong) {
+    // rename fields
+    commandLong.fields
+      .filter(field => field.name.startsWith('param'))
+      .forEach(field => field.name = '_' + field.name)
+  }
+
   // generate message classes
   messages.forEach(message => {
     output.write()
@@ -468,6 +499,13 @@ function generate(name: string, obj: any, output: Writter) {
     output.write('  ]')
     output.write('')
 
+    // generate constructor
+    output.write(`  constructor(targetSystem = 1, targetComponent = 1) {`)
+    output.write(`    super()`)
+    output.write(`    this.targetSystem = targetSystem`)
+    output.write(`    this.targetComponent = targetComponent`)
+    output.write(`  }`)
+
     // generate fields
     message.fields.forEach(field => {
       if (field.description.length > 0 || field.units) {
@@ -482,6 +520,96 @@ function generate(name: string, obj: any, output: Writter) {
     })
     output.write(`}`)
   })
+
+  // Generate classes for specific commands
+  if (commandTypes) {
+    if (moduleName !== 'common') {
+      output.write('')
+      output.write('import { CommandLong } from \'./common\'')
+      output.write('')
+    }
+
+    const labelToIdentifier = input => input
+      .toLowerCase()
+      .replace(/\s+(\w)?/gi, (match, letter) => letter.toUpperCase())
+      .split('/')[0]
+      .replace(/\-\S+/g, m => m.charAt(1).toUpperCase() +  m.substr(2))
+      .replace(/\-\S+/g, m => m.charAt(1).toUpperCase() +  m.substr(2))
+      .replace(/\.\S+/g, m => m.charAt(1).toUpperCase() +  m.substr(2))
+      .replace('4thDimension', 'fourthDimension')
+      .replace('5thDimension', 'fifthDimension')
+      .replace('6thDimension', 'sixthDimension')
+      .replace('command', 'cmd')
+
+    const nameToClassName = input => input
+      .replaceAll('_', ' ')
+      .replace(/\w\S*/g, m => m.charAt(0).toUpperCase() + m.substr(1).toLowerCase())
+      .replaceAll(' ', '') + 'Command'
+
+    commandTypes.values
+      .map(command => ({
+        ...command,
+        field: nameToClassName(command.name),
+        params: command.params
+          .map(p => ({
+            $: p.$,
+            index: p.$.index,
+            name: p.$.label,
+            description: p._,
+          }))
+          .filter(label => label.name)
+          .map(label => ({ ...label, name: labelToIdentifier(label.name), orgName: label.name }))
+      }))
+      .filter(command => command.params.length > 0)
+      .forEach((command, index) => {
+        if (index > 0) output.write('')
+        output.write(`export class ${command.field} extends CommandLong {`)
+        output.write(`  constructor(targetSystem = 1, targetComponent = 1) {`)
+        output.write(`    super()`)
+        output.write(`    this.command = MavCmd.${command.name} as number`)
+        output.write(`    this.targetSystem = targetSystem`)
+        output.write(`    this.targetComponent = targetComponent`)
+        output.write(`  }`)
+
+        command.params.forEach((param, index) => {
+          if (index > 0) output.write()
+          if (param.description) {
+            output.write(`  /**`)
+            const label = param.$.label ? ` ${param.$.label}` : ''
+            if (label) {
+              output.write(`   *${label}`)
+              output.write('   *')
+            }
+
+            const units = param.$.units ? `[${param.$.units}]` : ''
+            if (units) {
+              output.write(`   * @units ${units}`)
+            }
+            const parts = [
+              param.$.minValue ? `   * @min: ${param.$.minValue}` : '',
+              param.$.maxValue ? `   * @max: ${param.$.maxValue}` : '',
+              param.$.increment ? `   * @increment: ${param.$.increment}` : '',
+            ].filter(s => s).join('\n')
+            if (parts) {
+              output.write(parts)
+              output.write('   *')
+            }
+            if (param.description) {
+              output.write(`   * ${param.description}`)
+            }
+
+            output.write(`   */`)
+          }
+          output.write(`  get ${param.name}() {`);
+          output.write(`    return this._param${param.index}`);
+          output.write(`  }`);
+          output.write(`  set ${param.name}(value: number) {`);
+          output.write(`    this._param${param.index} = value`);
+          output.write(`  }`);
+        })
+        output.write(`}`)
+      })
+  }
 
   // generate message registry
   output.write()
@@ -506,7 +634,7 @@ async function main() {
     const data = await parser.parseStringPromise(xml.toString(), { explicitChildren: true, preserveChildrenOrder: true })
     const output = new Writter()
     output.write(imports.toString())
-    generate(part, data, output)
+    generate(part, data, output, part)
     fs.writeFileSync(`./lib/${part}.ts`, output.lines.join('\n'))
     process.stdout.write('done\n')
   }

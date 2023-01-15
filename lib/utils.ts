@@ -8,7 +8,7 @@
  export function x25crc(buffer: Buffer, start = 0, trim = 0, magic: number|null = null) {
   let crc = 0xffff;
 
-  const digest = byte => {
+  const digest = (byte: number) => {
     let tmp = (byte & 0xff) ^ (crc & 0xff);
     tmp ^= tmp << 4;
     tmp &= 0xff;
