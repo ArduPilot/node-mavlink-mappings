@@ -128,8 +128,8 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
           .filter(s => s.trim() !== '[object Object]')
           .join(' ') || '',
         params: xml.param || [],
-        hasLocation: Boolean(xml.$.hasLocation || false),
-        isDestination: Boolean(xml.$.isDestination || false),
+        hasLocation: xml.$.hasLocation === 'true',
+        isDestination: xml.$.isDestination === 'true',
       }))
     }))
 
@@ -215,6 +215,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
 
     // locate MavCmd enum to generate command classes
     commandTypes = enums.find(e => e.name === 'MavCmd')
+    console.log(commandTypes)
 
     // generate enums
     enums.forEach(entry => {
@@ -578,8 +579,28 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
           .map(label => ({ ...label, name: labelToIdentifier(label.name), orgName: label.name }))
       }))
       .filter(command => command.params.length > 0)
+      .filter(command => !command.workInProgress)
       .forEach((command, index) => {
         if (index > 0) output.write('')
+
+        if (command.description || command.hasLocation || command.isDestination) {
+          output.write('/**')
+          if (command.description.length > 0) {
+            output.write(` * ${command.description.join('\n * ')}`)
+          }
+          if (command.hasLocation || command.isDestination) {
+            if (command.description.length > 0) {
+              output.write(' *')
+            }
+            if (command.hasLocation) {
+              output.write(` * This command has location.`)
+            }
+            if (command.isDestination) {
+              output.write(` * This command is destination.`)
+            }
+          }
+          output.write(' */')
+        }
         output.write(`export class ${command.field} extends CommandLong {`)
         output.write(`  constructor(targetSystem = 1, targetComponent = 1) {`)
         output.write(`    super()`)
