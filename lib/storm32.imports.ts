@@ -12,5 +12,6 @@ import {
 } from './mavlink'
 
 import {
-  GimbalDeviceErrorFlags
+  GimbalDeviceErrorFlags,
+  MavLinkCommandRegistry
 } from './common'

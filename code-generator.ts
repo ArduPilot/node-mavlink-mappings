@@ -661,15 +661,12 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
 
   // generate command registry
   if (commandTypes) {
-    output.write(`import { MavLinkDataConstructor } from './mavlink'`)
-    output.write()
-
     const nameToClassName = input => input
       .replaceAll('_', ' ')
       .replace(/\w\S*/g, m => m.charAt(0).toUpperCase() + m.substr(1).toLowerCase())
       .replaceAll(' ', '') + 'Command'
 
-    output.write(`export const COMMANDS: Record<number, MavLinkDataConstructor<CommandLong>> = {`)
+    output.write(`export const COMMANDS: MavLinkCommandRegistry = {`)
     commandTypes.values
       .filter(command => !command.workInProgress)
       .forEach(command => {

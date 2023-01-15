@@ -15,5 +15,6 @@ import {
 } from './mavlink'
 
 import {
-  MavFrame
+  MavFrame,
+  MavLinkCommandRegistry
 } from './common'

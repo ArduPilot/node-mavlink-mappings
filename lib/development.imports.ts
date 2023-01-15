@@ -19,7 +19,8 @@ import {
   MavMissionType,
   MavParamType,
   ParamAck,
-  MavProtocolCapability
+  MavProtocolCapability,
+  MavLinkCommandRegistry
 } from './common'
 
 import {

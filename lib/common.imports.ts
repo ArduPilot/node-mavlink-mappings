@@ -14,7 +14,8 @@ import {
 import {
   MavLinkPacketRegistry,
   MavLinkPacketField,
-  MavLinkData
+  MavLinkData,
+  MavLinkDataConstructor
 } from './mavlink'
 
 import {
@@ -23,3 +24,5 @@ import {
   MavComponent,
   MavModeFlag
 } from './minimal'
+
+export type MavLinkCommandRegistry = Record<number, MavLinkDataConstructor<CommandLong>>

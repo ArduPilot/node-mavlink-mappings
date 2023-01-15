@@ -19,5 +19,6 @@ import {
   MavMountMode,
   MavDistanceSensor,
   MavFrame,
-  MagCalStatus
+  MagCalStatus,
+  MavLinkCommandRegistry
 } from './common'
