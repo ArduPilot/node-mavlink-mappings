@@ -215,7 +215,6 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
 
     // locate MavCmd enum to generate command classes
     commandTypes = enums.find(e => e.name === 'MavCmd')
-    console.log(commandTypes)
 
     // generate enums
     enums.forEach(entry => {
@@ -578,7 +577,6 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
           .filter(label => label.name)
           .map(label => ({ ...label, name: labelToIdentifier(label.name), orgName: label.name }))
       }))
-      .filter(command => command.params.length > 0)
       .filter(command => !command.workInProgress)
       .forEach((command, index) => {
         if (index > 0) output.write('')
@@ -601,6 +599,8 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
           }
           output.write(' */')
         }
+
+        console.log('command.field', command.field);
         output.write(`export class ${command.field} extends CommandLong {`)
         output.write(`  constructor(targetSystem = 1, targetComponent = 1) {`)
         output.write(`    super()`)
@@ -658,6 +658,26 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
   })
   output.write('}')
   output.write()
+
+  // generate command registry
+  if (commandTypes) {
+    output.write(`import { MavLinkDataConstructor } from './mavlink'`)
+    output.write()
+
+    const nameToClassName = input => input
+      .replaceAll('_', ' ')
+      .replace(/\w\S*/g, m => m.charAt(0).toUpperCase() + m.substr(1).toLowerCase())
+      .replaceAll(' ', '') + 'Command'
+
+    output.write(`export const COMMANDS: Record<number, MavLinkDataConstructor<CommandLong>> = {`)
+    commandTypes.values
+      .filter(command => !command.workInProgress)
+      .forEach(command => {
+        output.write(`  [MavCmd.${command.name}]: ${nameToClassName(command.name)},`)
+      })
+    output.write(`}`)
+    output.write()
+  }
 }
 
 import { mappings } from './package.json'
