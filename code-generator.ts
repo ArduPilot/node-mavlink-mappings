@@ -232,13 +232,16 @@ function generate(name: string, obj: any, output: Writer, moduleName: string = '
       output.write(`export enum ${entry.name} {`)
 
       // generate enum values
-      entry.values.forEach((value, index, values) => {
+      entry.values.forEach((value, index) => {
         const props = [
           value.hasLocation ? `has location` : '',
           value.isDestination ? 'is destination' : '',
         ].filter(s => s)
 
         if (value.description.length > 0 || value.params.length > 0 || props.length || value.hasLocation || value.isDestination) {
+          if (index > 0) {
+            output.write('')
+          }
           output.write('  /**')
           if (value.description.length > 0) {
             output.write(`   * ${value.description.join('\n   * ')}`)
@@ -275,10 +278,6 @@ function generate(name: string, obj: any, output: Writer, moduleName: string = '
         }
         const padding = ''.padEnd(maxValueNameLength - value.name.length, ' ')
         output.write(`  '${value.name}'${padding} = ${value.value},`)
-
-        if (values.length - 1 > index) {
-          output.write('')
-        }
       })
       output.write(`}`)
     })
@@ -608,7 +607,6 @@ function generate(name: string, obj: any, output: Writer, moduleName: string = '
           output.write(' */')
         }
 
-        console.log('command.field', command.field)
         output.write(`export class ${command.field} extends CommandLong {`)
         output.write(`  constructor(targetSystem = 1, targetComponent = 1) {`)
         output.write(`    super()`)
