@@ -3,6 +3,7 @@
 import * as fs from 'fs'
 import * as parser from 'xml2js'
 import { x25crc } from './lib/utils'
+import { Writer, XmlSourceReader } from './generators'
 
 const snakeToCamel = s => s.replace(/([-_]\w)/g, g => g[1].toUpperCase())
 
@@ -92,28 +93,26 @@ function matchTextToWidth(s: string, width = 100) {
   return result
 }
 
-class Writer {
-  lines = [] as string[]
+class InMemoryWriter implements Writer {
+  readonly lines = [] as string[]
 
-  constructor() { }
-
-  write(s = '') {
-    this.lines.push(s)
+  write(line = '') {
+    this.lines.push(line)
   }
 }
-
-const magicNumbers = {}
 
 function generate(name: string, obj: any, output: Writer, moduleName: string = '') {
   // ------------------------------------------------------------------------
   // ENUMS
   // ------------------------------------------------------------------------
 
-  let commandTypes: any = null
+  const inpt = new XmlSourceReader().read(obj.mavlink)
+  console.log('inpt', inpt)
+  let enums: any[] = []
 
   // parse XML data
   if (obj.mavlink.enums[0]?.enum) {
-    const enums = obj.mavlink.enums[0].enum.map(xml => ({
+    enums = obj.mavlink.enums[0].enum.map(xml => ({
       name: makeClassName(xml.$.name),
       source: {
         name: xml.$.name,
@@ -212,9 +211,6 @@ function generate(name: string, obj: any, output: Writer, moduleName: string = '
       const maxLength = entry.values.reduce((acc, value) => Math.max(acc, value.name.length), 0)
       return Math.max(acc, maxLength)
     }, 0)
-
-    // locate MavCmd enum to generate command classes
-    commandTypes = enums.find(e => e.name === 'MavCmd')
 
     // generate enums
     enums.forEach(entry => {
@@ -412,9 +408,6 @@ function generate(name: string, obj: any, output: Writer, moduleName: string = '
     }
     const crc = x25crc(buffer)
     message.magic = (crc & 0xff) ^ (crc >> 8)
-
-    // put the magic number in global table - the magic-numbers.ts will be generated at the end from it
-    magicNumbers[message.id] = message.magic
   })
 
   // for CommandInt override the fields
@@ -544,6 +537,9 @@ function generate(name: string, obj: any, output: Writer, moduleName: string = '
     })
     output.write(`}`)
   })
+
+  // locate MavCmd enum to generate command classes
+  const commandTypes = enums.find(e => e.name === 'MavCmd')
 
   // Generate classes for specific commands
   if (commandTypes) {
@@ -681,12 +677,15 @@ function generate(name: string, obj: any, output: Writer, moduleName: string = '
     output.write(`}`)
     output.write()
   }
+
+  return { enums, messages, commands: commandTypes }
 }
 
 import { mappings } from './package.json'
 
 async function main() {
   const parts = mappings.map(mapping => mapping.name)
+  const magicNumbers = {}
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
@@ -694,9 +693,10 @@ async function main() {
     const imports = fs.readFileSync(`lib/${part}.imports.ts`)
     const xml = fs.readFileSync(`${part}.xml`)
     const data = await parser.parseStringPromise(xml.toString(), { explicitChildren: true, preserveChildrenOrder: true })
-    const output = new Writer()
+    const output = new InMemoryWriter()
     output.write(imports.toString())
-    generate(part, data, output, part)
+    const { messages } = generate(part, data, output, part)
+    messages.forEach(message => { magicNumbers[message.id] = message.magic })
     fs.writeFileSync(`./lib/${part}.ts`, output.lines.join('\n'))
     process.stdout.write('done\n')
   }
