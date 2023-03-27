@@ -1,6 +1,6 @@
 {
   "name": "mavlink-mappings",
-  "version": "1.0.13-20230115-3",
+  "version": "1.0.14-20230327-0",
   "author": "Matthias Hryniszak <padcom@gmail.com>",
   "license": "LGPL",
   "description": "MavLink message definitions",
