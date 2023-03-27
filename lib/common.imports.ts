@@ -21,7 +21,6 @@ import {
 import {
   MavType,
   MavAutopilot,
-  MavComponent,
   MavModeFlag
 } from './minimal'
 

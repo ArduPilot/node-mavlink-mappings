@@ -4,11 +4,11 @@ import * as fs from 'fs'
 import * as parser from 'xml2js'
 import { x25crc } from './lib/utils'
 
-const snakeToCamel = s => s.replace(/([-_]\w)/g, g => g[1].toUpperCase());
+const snakeToCamel = s => s.replace(/([-_]\w)/g, g => g[1].toUpperCase())
 
 const snakeToPascal = s => {
-  const camelCase = snakeToCamel(s);
-  return camelCase[0].toUpperCase() + camelCase.substr(1);
+  const camelCase = snakeToCamel(s)
+  return camelCase[0].toUpperCase() + camelCase.substr(1)
 }
 
 function makeClassName(message: string) {
@@ -76,9 +76,9 @@ function matchTextToWidth(s: string, width = 100) {
     s = s.replace(/  /g, ' ')
   }
 
-  // cut text into max 100 character lines and remove any persisting whitespaces
+  // cut text into max 100 character lines and remove any persisting whitespace
   const result = s
-    .replace(/\s*(?:(\S{100})|([\s\S]{1,100})(?!\S))/g, ($0,$1,$2) => $1 ? $1 + '-\n' : $2 + '\n')
+    .replace(/\s*(?:(\S{100})|([\s\S]{1,100})(?!\S))/g, ($0, $1, $2) => $1 ? $1 + '-\n' : $2 + '\n')
     .split('\n')
     .map(line => line.trim())
 
@@ -92,10 +92,10 @@ function matchTextToWidth(s: string, width = 100) {
   return result
 }
 
-class Writter {
+class Writer {
   lines = [] as string[]
 
-  constructor() {}
+  constructor() { }
 
   write(s = '') {
     this.lines.push(s)
@@ -104,7 +104,7 @@ class Writter {
 
 const magicNumbers = {}
 
-function generate(name: string, obj: any, output: Writter, moduleName: string = '') {
+function generate(name: string, obj: any, output: Writer, moduleName: string = '') {
   // ------------------------------------------------------------------------
   // ENUMS
   // ------------------------------------------------------------------------
@@ -155,7 +155,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
           } else {
             for (let i = 0; i < Math.min(acc.length, name.length); i++) {
               if (acc[i] !== name[i]) return acc.substr(0, i)
-          }
+            }
           }
           return acc
         }, '')
@@ -194,7 +194,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
 
       // if the trimmed value starts with a digit revert to xml source
       entry.values.forEach(value => {
-        if ([ '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ].includes(value.name[0])) {
+        if (['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(value.name[0])) {
           value.name = value.source.name
         }
       })
@@ -232,7 +232,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
       output.write(`export enum ${entry.name} {`)
 
       // generate enum values
-      entry.values.forEach(value => {
+      entry.values.forEach((value, index, values) => {
         const props = [
           value.hasLocation ? `has location` : '',
           value.isDestination ? 'is destination' : '',
@@ -252,7 +252,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
 
           if (value.params) {
             const params = value.params as any[]
-            if (value.description.length > 0 || props.length > 0) {
+            if (value.description.length > 0 && props.length > 0) {
               output.write(`   *`)
             }
             params.forEach(param => {
@@ -275,6 +275,10 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
         }
         const padding = ''.padEnd(maxValueNameLength - value.name.length, ' ')
         output.write(`  '${value.name}'${padding} = ${value.value},`)
+
+        if (values.length - 1 > index) {
+          output.write('')
+        }
       })
       output.write(`}`)
     })
@@ -402,9 +406,9 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
       // to denote that it is read-only (crazy stuff)
       const fieldType = field.source.type === 'uint8_t_mavlink_version' ? 'uint8_t' : field.itemType
       const fieldName = field.source.name
-      buffer = Buffer.concat([ buffer, Buffer.from(`${fieldType} ${fieldName} `) ])
+      buffer = Buffer.concat([buffer, Buffer.from(`${fieldType} ${fieldName} `)])
       if (field.arrayLength) {
-        buffer = Buffer.concat([ buffer, Buffer.from([ field.arrayLength ])])
+        buffer = Buffer.concat([buffer, Buffer.from([field.arrayLength])])
       }
     }
     const crc = x25crc(buffer)
@@ -418,7 +422,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
   const commandInt = messages.find(message => message.name === 'CommandInt')
   if (commandInt) {
     // rename fields
-    const FIELDS = [ 'param1', 'param2', 'param3', 'param4', 'x', 'y', 'z']
+    const FIELDS = ['param1', 'param2', 'param3', 'param4', 'x', 'y', 'z']
     commandInt.fields
       .filter(field => FIELDS.includes(field.name))
       .forEach(field => {
@@ -476,7 +480,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
     // generate fields collection
     output.write('  static FIELDS = [')
 
-    // base fields go first; they are sorted from the largest fields to the smalles
+    // base fields go first; they are sorted from the largest fields to the smallest
     // if the size is the same then the order from xml is preserved
     const fields = [...message.fields]
     fields.sort((f1, f2) => f2.fieldSize - f1.fieldSize)
@@ -522,9 +526,10 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
       output.write(`    this.${field.name} = ${init}`)
     })
     output.write(`  }`)
+    output.write('')
 
     // generate fields
-    message.fields.forEach(field => {
+    message.fields.forEach((field, index, fields) => {
       if (field.description.length > 0 || field.units) {
         output.write('  /**')
         output.write(`   * ${field.description.join('\n   * ')}`)
@@ -534,6 +539,9 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
         output.write('   */')
       }
       output.write(`  ${field.name}: ${field.type}`)
+      if (fields.length - 1 > index) {
+        output.write('')
+      }
     })
     output.write(`}`)
   })
@@ -550,9 +558,9 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
       .toLowerCase()
       .replace(/\s+(\w)?/gi, (match, letter) => letter.toUpperCase())
       .split('/')[0]
-      .replace(/\-\S+/g, m => m.charAt(1).toUpperCase() +  m.substr(2))
-      .replace(/\-\S+/g, m => m.charAt(1).toUpperCase() +  m.substr(2))
-      .replace(/\.\S+/g, m => m.charAt(1).toUpperCase() +  m.substr(2))
+      .replace(/\-\S+/g, m => m.charAt(1).toUpperCase() + m.substr(2))
+      .replace(/\-\S+/g, m => m.charAt(1).toUpperCase() + m.substr(2))
+      .replace(/\.\S+/g, m => m.charAt(1).toUpperCase() + m.substr(2))
       .replace('4thDimension', 'fourthDimension')
       .replace('5thDimension', 'fifthDimension')
       .replace('6thDimension', 'sixthDimension')
@@ -600,7 +608,7 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
           output.write(' */')
         }
 
-        console.log('command.field', command.field);
+        console.log('command.field', command.field)
         output.write(`export class ${command.field} extends CommandLong {`)
         output.write(`  constructor(targetSystem = 1, targetComponent = 1) {`)
         output.write(`    super()`)
@@ -639,12 +647,12 @@ function generate(name: string, obj: any, output: Writter, moduleName: string = 
 
             output.write(`   */`)
           }
-          output.write(`  get ${param.name}() {`);
-          output.write(`    return this._param${param.index}`);
-          output.write(`  }`);
-          output.write(`  set ${param.name}(value: number) {`);
-          output.write(`    this._param${param.index} = value`);
-          output.write(`  }`);
+          output.write(`  get ${param.name}() {`)
+          output.write(`    return this._param${param.index}`)
+          output.write(`  }`)
+          output.write(`  set ${param.name}(value: number) {`)
+          output.write(`    this._param${param.index} = value`)
+          output.write(`  }`)
         })
         output.write(`}`)
       })
@@ -688,7 +696,7 @@ async function main() {
     const imports = fs.readFileSync(`lib/${part}.imports.ts`)
     const xml = fs.readFileSync(`${part}.xml`)
     const data = await parser.parseStringPromise(xml.toString(), { explicitChildren: true, preserveChildrenOrder: true })
-    const output = new Writter()
+    const output = new Writer()
     output.write(imports.toString())
     generate(part, data, output, part)
     fs.writeFileSync(`./lib/${part}.ts`, output.lines.join('\n'))
