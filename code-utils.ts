@@ -88,3 +88,73 @@ export function matchTextToWidth(s: string, width = 100) {
 
   return result
 }
+
+export function nameToClassName(input: string = '') {
+  return input
+    .replaceAll('_', ' ')
+    .replace(/\w\S*/g, m => m.charAt(0).toUpperCase() + m.substr(1).toLowerCase())
+    .replaceAll(' ', '') + 'Command'
+}
+
+export function labelToIdentifier(input: string) {
+  return input
+    .toLowerCase()
+    .replace(/\s+(\w)?/gi, (match, letter) => letter.toUpperCase())
+    .split('/')[0]
+    .replace(/\-\S+/g, m => m.charAt(1).toUpperCase() + m.substr(2))
+    .replace(/\-\S+/g, m => m.charAt(1).toUpperCase() + m.substr(2))
+    .replace(/\.\S+/g, m => m.charAt(1).toUpperCase() + m.substr(2))
+    .replace('4thDimension', 'fourthDimension')
+    .replace('5thDimension', 'fifthDimension')
+    .replace('6thDimension', 'sixthDimension')
+    .replace('command', 'cmd')
+}
+
+export function calculateCommonPrefix(entry: {
+  values: {
+    source: {
+      name: string
+    }
+  }[]
+  source: {
+    name: string
+  }
+}) {
+  let commonPrefix = entry.values
+    .map(entry => entry.source.name)
+    .reduce((acc, name) => {
+      if (acc === '') {
+        return name
+      } else {
+        for (let i = 0; i < Math.min(acc.length, name.length); i++) {
+          if (acc[i] !== name[i]) return acc.substr(0, i)
+        }
+      }
+      return acc
+    }, '')
+
+  // trim the common prefix so that it ends with an underscore
+  while (!commonPrefix.endsWith('_') && commonPrefix.length > 0) {
+    commonPrefix = commonPrefix.substr(0, commonPrefix.length - 1)
+  }
+
+  // if the common prefix is contains parts of the value revert to source enum name
+  if (commonPrefix.startsWith(entry.source.name) && commonPrefix.length > entry.source.name.length + 1) {
+    commonPrefix = entry.source.name + '_'
+  }
+
+  // if the common prefix is empty revert to source enum name
+  if (commonPrefix === '') {
+    commonPrefix = entry.source.name + '_'
+  }
+
+  return commonPrefix
+}
+
+export function makeEnumFieldType(fieldType: string, enumName: string) {
+  if (fieldType.includes('[')) {
+    return `${enumName}[]`
+  } else {
+    return enumName
+  }
+}
