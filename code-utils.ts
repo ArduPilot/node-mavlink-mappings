@@ -5,10 +5,22 @@ export const snakeToPascal = s => {
   return camelCase[0].toUpperCase() + camelCase.substr(1)
 }
 
+/**
+ * Given the message convert it to a valid class name
+ *
+ * @param message message to convert to class name
+ * @returns class name of the given message
+ */
 export function makeClassName(message: string) {
   return snakeToPascal(message.toLowerCase())
 }
 
+/**
+ * Extracts type of the array
+ *
+ * @param type type to extract the size
+ * @returns type of the array
+ */
 export function extractArrayType(type: string) {
   if (type.indexOf('[') > -1) {
     return type.replace(/(.*)\[(\d+)\]/, (x, t, size) => `${t}[]`)
@@ -17,6 +29,12 @@ export function extractArrayType(type: string) {
   }
 }
 
+/**
+ * Extracts the type of item of an array type
+ *
+ * @param type type to extract the size
+ * @returns type of the array element
+ */
 export function extractArrayItemType(type: string) {
   if (type.indexOf('[') > -1) {
     return type.replace(/(.*)\[(\d+)\]/, (x, t, size) => `${t}`)
@@ -25,6 +43,12 @@ export function extractArrayItemType(type: string) {
   }
 }
 
+/**
+ * Extracts the size of array type
+ *
+ * @param type type to extract the size
+ * @returns size of the array
+ */
 export function extractArraySize(type: string) {
   if (type.indexOf('[') > -1) {
     return parseInt(type.replace(/(.*)\[(\d+)\]/, (x, t, size) => size))
@@ -33,7 +57,13 @@ export function extractArraySize(type: string) {
   }
 }
 
-export function getTypeSize(type) {
+/**
+ * Returns size in bytes of the given type
+ *
+ * @param type type to get the size
+ * @returns number of bytes occupied by the given type
+ */
+export function getTypeSize(type: string) {
   const name = (type.indexOf('[') > -1)
     ? type.replace(/(.*)\[(\d+)\]/, (x, t, size) => t)
     : type
@@ -60,6 +90,14 @@ export function getTypeSize(type) {
   }
 }
 
+/**
+ * Match text to the given width cutting it into multiple
+ * lines if the original text's length exceeds the given
+ * width
+ *
+ * @param s string to match
+ * @param width width to match
+ */
 export function matchTextToWidth(s: string, width = 100) {
   if (s === null || s === undefined) {
     return []
@@ -157,4 +195,14 @@ export function makeEnumFieldType(fieldType: string, enumName: string) {
   } else {
     return enumName
   }
+}
+
+/**
+ * Compute max length of value name for later padding values
+ */
+export function calculateMaxEnumValueNameLength(enums: { values: { name: string }[] }[]) {
+  return enums.reduce((acc, entry) => {
+    const maxLength = entry.values.reduce((acc, value) => Math.max(acc, value.name.length), 0)
+    return Math.max(acc, maxLength)
+  }, 0)
 }

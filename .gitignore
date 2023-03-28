@@ -7,3 +7,4 @@ lib/mavlink.ts
 lib/types.ts
 lib/utils.ts
 *.tgz
+lib-org

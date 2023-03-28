@@ -14,7 +14,6 @@ import {
 } from './mavlink'
 
 import {
-  MavFrame,
   MavMissionType,
   MavParamType,
   ParamAck,
@@ -23,6 +22,5 @@ import {
 } from './common'
 
 import {
-  MavComponent,
   MavModeFlag
 } from './minimal'
