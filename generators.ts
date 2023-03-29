@@ -644,7 +644,7 @@ export function generateCommandRegistry(output: Writer, commands: { name: string
 
 export function generateMagicNumbers(magicNumbers: Record<string, string>) {
   return [
-    `export const MSG_ID_MAGIC_NUMBER = {`,
+    `export const MSG_ID_MAGIC_NUMBER: Record<string, number> = {`,
     ...Object.entries(magicNumbers).map(([msgid, magic]) => `  '${msgid}': ${magic},`, ''),
     `}`
   ].join('\n') + '\n'
