@@ -14,7 +14,7 @@ You may consider writing the a class definition by hand, which is definitely pos
 
 One thing that will allow you to basically generate all definitions in one go is to base them on a mavlink xml definition file. For a list of supported features look at the original XML definitions. At the moment minimal, common, development, ardupilotmega, asluav, icarus, storm32, ualberta and uavionix definitions are recognized by the generator.
 
-```
+```typescript
 async function generateAll(input: string, output: Writer, moduleName: string = '')
 ```
 
