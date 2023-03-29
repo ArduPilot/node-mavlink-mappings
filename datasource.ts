@@ -10,7 +10,7 @@ import {
   nameToClassName,
   makeEnumFieldType
 } from './code-utils'
-import { x25crc } from './lib/utils'
+import { calculateCrcExtra } from './lib/utils'
 
 import { Pipeable, pipeable } from './pipeable'
 
@@ -210,32 +210,10 @@ export class XmlDataSource {
         payloadLength: message.fields.reduce((acc, field) => acc + field.size, 0),
       })))
       // calculate magic numbers
-      .pipe(messages => messages.map(message => {
-        // CRC is generated from the definition of base fields in network order (big fields first, then the small ones)
-        const fields = [...message.fields]
-          .filter(field => !field.extension)
-          .sort((f1, f2) => f2.fieldSize - f1.fieldSize)
-
-        // See https://mavlink.io/en/guide/serialization.html#crc_extra for more information
-        let buffer = Buffer.from(message.source.name + ' ')
-        for (let i = 0; i < fields.length; i++) {
-          const field = fields[i]
-          // the uint8_t_mavlink_version typ is actually uint8_t but spelled like that
-          // to denote that it is read-only (crazy stuff)
-          const fieldType = field.source.type === 'uint8_t_mavlink_version' ? 'uint8_t' : field.itemType
-          const fieldName = field.source.name
-          buffer = Buffer.concat([buffer, Buffer.from(`${fieldType} ${fieldName} `)])
-          if (field.arrayLength) {
-            buffer = Buffer.concat([buffer, Buffer.from([field.arrayLength])])
-          }
-        }
-        const crc = x25crc(buffer)
-
-        return {
-          ...message,
-          magic: (crc & 0xff) ^ (crc >> 8),
-        }
-      }))
+      .pipe(messages => messages.map(message => ({
+        ...message,
+        magic: calculateCrcExtra(message.source.name, message.fields),
+      })))
   }
 
   private readMessageFieldDefs(xml: any): MessageFieldDef[] {
