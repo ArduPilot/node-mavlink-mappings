@@ -1,4 +1,3 @@
-import * as parser from 'xml2js'
 import {
   extractArrayItemType,
   extractArraySize,
@@ -100,7 +99,16 @@ export interface Input {
 }
 
 export class XmlDataSource {
+  private async loadParser() {
+    try {
+      return await import('xml2js')
+    } catch (e) {
+      throw new Error(`Unable to load 'xml2js' peer dependency. Install the 'xml2js' package!`)
+    }
+  }
+
   async parse(xml: string): Promise<Input> {
+    const parser = await this.loadParser()
     const data = await parser.parseStringPromise(xml, { explicitChildren: true, preserveChildrenOrder: true })
     return this.read(data.mavlink)
   }
