@@ -1,3 +1,4 @@
+import * as parser from 'xml2js'
 import {
   extractArrayItemType,
   extractArraySize,
@@ -10,7 +11,7 @@ import {
   nameToClassName,
   makeEnumFieldType
 } from './code-utils'
-import { calculateCrcExtra } from './lib/utils'
+import { calculateCrcExtra } from '../lib/utils'
 
 import { Pipeable, pipeable } from './pipeable'
 
@@ -99,6 +100,11 @@ export interface Input {
 }
 
 export class XmlDataSource {
+  async parse(xml: string): Promise<Input> {
+    const data = await parser.parseStringPromise(xml, { explicitChildren: true, preserveChildrenOrder: true })
+    return this.read(data.mavlink)
+  }
+
   read(mavlink: any): Input {
     const enumDefs = this.readEnumDefs(mavlink)
     const messageDefs = this.readMessageDefs(mavlink)

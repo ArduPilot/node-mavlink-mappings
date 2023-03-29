@@ -1,26 +1,28 @@
 import {
   int16_t,
+  int32_t,
   uint8_t,
   uint16_t,
   uint32_t,
   uint64_t,
-  float
+  float,
 } from './types'
 
 import {
   MavLinkPacketRegistry,
   MavLinkPacketField,
-  MavLinkData
+  MavLinkData,
 } from './mavlink'
 
 import {
+  LandingTargetType,
+  MavLinkCommandRegistry,
   MavMissionType,
   MavParamType,
-  ParamAck,
   MavProtocolCapability,
-  MavLinkCommandRegistry
+  ParamAck,
 } from './common'
 
 import {
-  MavModeFlag
+  MavModeFlag,
 } from './minimal'

@@ -6,14 +6,4 @@ declare global {
   }
 }
 
-/**
- * Simple interface to define objects that allow for writing lines
- */
-export interface Writer {
-  /**
-   * Write a single line
-   *
-   * @param line line to write (handle missing values!)
-   */
-  write(line?: string)
-}
+export { }

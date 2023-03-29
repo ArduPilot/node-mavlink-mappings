@@ -1,5 +1,18 @@
-import { calculateMaxEnumValueNameLength } from './code-utils'
-import { Writer } from './definitions'
+import { calculateMaxEnumValueNameLength, matchTextToWidth } from './code-utils'
+import { CommandTypeDef, EnumDef, MessageDef, XmlDataSource } from './datasource'
+import { Pipeable } from './pipeable'
+
+/**
+ * Simple interface to define objects that allow for writing lines
+ */
+export interface Writer {
+  /**
+   * Write a single line
+   *
+   * @param line line to write (handle missing values!)
+   */
+  write(line?: string)
+}
 
 export function generateEnums(output: Writer, enums: {
   name: string
@@ -648,4 +661,88 @@ export function generateMagicNumbers(magicNumbers: Record<string, string>) {
     ...Object.entries(magicNumbers).map(([msgid, magic]) => `  '${msgid}': ${magic},`, ''),
     `}`
   ].join('\n') + '\n'
+}
+
+function processEnums(output: Writer, enumDefs: EnumDef[] & Pipeable<EnumDef[]>) {
+  const enums = enumDefs
+    // update descriptions to be multiline strings with a maximum width
+    .pipe(enums => enums.map(entry => ({
+      ...entry,
+      description: matchTextToWidth(entry.description),
+      values: entry.values.map(value => ({
+        ...value,
+        description: matchTextToWidth(value.description),
+      })),
+    })))
+
+  generateEnums(output, enums)
+
+  return enums
+}
+
+function processMessages(output: Writer, messageDefs: MessageDef[] & Pipeable<MessageDef[]>) {
+  const FIXED_MESSAGE_NAMES = {
+    '111': 'TimeSync',
+    '138': 'MotionCaptureAttPos',
+    '152': 'MemInfo',
+    '164': 'SimState',
+    '165': 'HwStatus',
+    '173': 'RangeFinder',
+    '177': 'CompassMotStatus',
+    '253': 'StatusText',
+  }
+
+  const messages = messageDefs
+    // update descriptions to be multiline strings with a maximum width
+    // fix some messages because they lack underscore in the original name
+    .pipe(messages => messages.map(message => ({
+      ...message,
+      name: FIXED_MESSAGE_NAMES[message.id] || message.name,
+      description: matchTextToWidth(message.description),
+      fields: message.fields.map(field => ({
+        ...field,
+        description: matchTextToWidth(field.description),
+      })),
+    })))
+
+  generateMessages(output, messages)
+
+  return messages
+}
+
+function processCommands(output: Writer, moduleName: string, commandTypeDefs: CommandTypeDef[] & Pipeable<CommandTypeDef[]>) {
+  const commands = commandTypeDefs
+    .pipe(commands => commands.map(command => ({
+      ...command,
+      description: matchTextToWidth(command.description),
+      params: command.params
+        .map(param => ({
+          ...param,
+          description: matchTextToWidth(param.description),
+        }))
+        .filter(param => param.name)
+    })))
+
+  generateCommands(output, moduleName, commands)
+
+  return commands
+}
+
+export function processRegistries(output: Writer,
+  messages: { id: string, name: string }[],
+  commands: { name: string, field: string }[],
+) {
+  generateMessageRegistry(output, messages)
+  generateCommandRegistry(output, commands)
+}
+
+export async function generateAll(input: string, output: Writer, moduleName: string = '') {
+  const { enumDefs, messageDefs, commandTypeDefs } = await new XmlDataSource().parse(input)
+
+  const enums = processEnums(output, enumDefs)
+  const messages = processMessages(output, messageDefs)
+  const commands = processCommands(output, moduleName, commandTypeDefs)
+  processRegistries(output, messages, commands)
+
+  return { enums, messages, commands }
 }
