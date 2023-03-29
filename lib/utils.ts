@@ -27,7 +27,7 @@ export function x25crc(buffer: Buffer, start = 0, trim = 0, magic: number | null
   return crc
 }
 
-export function calculateCrcExtra(sourceName: string, fields: {
+export function calculateCrcExtra(messageSourceName: string, fields: {
   extension: boolean
   itemType: string
   fieldSize: number
@@ -39,7 +39,7 @@ export function calculateCrcExtra(sourceName: string, fields: {
     .sort((f1, f2) => f2.fieldSize - f1.fieldSize)
 
   // See https://mavlink.io/en/guide/serialization.html#crc_extra for more information
-  let buffer = Buffer.from(sourceName + ' ')
+  let buffer = Buffer.from(messageSourceName + ' ')
   for (let i = 0; i < fields.length; i++) {
     const field = fields[i]
     // the uint8_t_mavlink_version typ is actually uint8_t but spelled like that
