@@ -18,6 +18,12 @@ One thing that will allow you to basically generate all definitions in one go is
 async function generateAll(input: string, output: Writer, moduleName: string = '')
 ```
 
+Please note, that for this to work the generator needs an XML parser. The one that it uses to do the job is [xml2js](https://npmjs.com/package/xml2js). You can install it as follows:
+
+```
+$ npm install --save xml2js
+```
+
 ### Generating based on data
 
 This is a much more tedious process but it allows you to use something completely different to read the definitions from. There are a few interfaces that you'll have to get familiar with (like EnumDef, MessageDef and CommandTypeDef) but after you'll get them the generator should produce valid definitions.
