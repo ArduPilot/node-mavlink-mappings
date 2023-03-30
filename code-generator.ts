@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 
 import * as fs from 'fs'
-import * as parser from 'xml2js'
 
-import { type Writer, generateAll, generateMagicNumbers } from './generator'
-
+import { type Writer, generateAll, generateMagicNumbers } from 'mavlink-mappings-gen'
 import { mappings } from './package.json'
 
 class InMemoryWriter implements Writer {
@@ -26,7 +24,7 @@ async function main() {
     const imports = fs.existsSync(importsFileName) ? fs.readFileSync(importsFileName) : Buffer.from('')
     const input = fs.readFileSync(`${module}.xml`).toString()
     const output = new InMemoryWriter()
-    output.write(imports.toString())
+    if (imports.length > 0) output.write(imports.toString())
     const { messages } = await generateAll(input, output, module)
     messages.forEach(message => { magicNumbers[message.id] = message.magic })
     fs.writeFileSync(`./lib/${module}.ts`, output.lines.join('\n'))
