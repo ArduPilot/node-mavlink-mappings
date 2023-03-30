@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "ts-node": "^10.9.1",
-    "mavlink-mappings-gen": "^0.0.6"
+    "mavlink-mappings-gen": "^0.0.7"
   },
   "devDependencies": {
     "@types/node": "^18.15.10",
