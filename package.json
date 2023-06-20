@@ -1,6 +1,6 @@
 {
   "name": "mavlink-mappings",
-  "version": "1.0.19-20230331-0",
+  "version": "1.0.19-20230620-0",
   "author": "Matthias Hryniszak <padcom@gmail.com>",
   "license": "LGPL",
   "description": "MavLink message definitions",
@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "ts-node": "^10.9.1",
-    "mavlink-mappings-gen": "^0.0.7"
+    "mavlink-mappings-gen": "^0.0.9"
   },
   "devDependencies": {
     "@types/node": "^18.15.10",
