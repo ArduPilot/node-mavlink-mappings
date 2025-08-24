@@ -24,4 +24,9 @@ import {
   MavModeFlag
 } from './minimal'
 
+import {
+  MavBool,
+  MavProtocolCapability
+} from './standard'
+
 export type MavLinkCommandRegistry = Record<number, MavLinkDataConstructor<CommandLong>>

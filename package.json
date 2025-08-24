@@ -53,6 +53,10 @@
       "name": "minimal"
     },
     {
+      "url": "https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/standard.xml",
+      "name": "standard"
+    },
+    {
       "url": "https://raw.githubusercontent.com/mavlink/mavlink/master/message_definitions/v1.0/common.xml",
       "name": "common"
     },
