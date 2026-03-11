@@ -3,7 +3,8 @@ import {
   uint32_t,
   uint16_t,
   uint8_t,
-  uint8_t_mavlink_version
+  int32_t,
+  int16_t,
 } from './types'
 
 import {
